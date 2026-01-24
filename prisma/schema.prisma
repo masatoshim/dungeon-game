@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+
+model Dungeon {
+  id          String   @id @default(uuid())
+  name        String
+  // マップデータはJSON形式の文字列として保存
+  mapData     String   
+  timeLimit   Int      @default(60)
+  difficulty  Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -2,36 +2,47 @@
 import { useEffect, useRef } from 'react';
 import * as Phaser from 'phaser';
 import { MainScene } from '@/game/scenes/MainScene';
-import { TileType } from '@/types/game'; // パスは環境に合わせて調整
+import { TileId } from '@/types/game';
 
 interface GameCanvasProps {
-  mapData: TileType[][];
+  mapData: TileId[][];
+  timeLimit: number;
 }
 
-export default function GameCanvas({ mapData }: GameCanvasProps) {
-  const gameRef = useRef<HTMLDivElement>(null);
+export default function GameCanvas({ mapData, timeLimit }: GameCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null); // DOM用
+  const phaserRef = useRef<Phaser.Game | null>(null); // Phaserインスタンス保持用
 
   useEffect(() => {
-    if (!gameRef.current) return;
+    if (!containerRef.current) return;
 
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
       width: 800,
       height: 600,
-      parent: gameRef.current,
-      physics: { default: 'arcade' },
-      scene: [MainScene],
+      parent: containerRef.current,
+      physics: { 
+        default: 'arcade',
+        arcade: { debug: true } // 当たり判定表示
+      },
     };
 
     const game = new Phaser.Game(config);
+    game.scene.add('MainScene', MainScene);
+    game.scene.start('MainScene', { 
+      mapData: { tiles: mapData }, 
+      timeLimit: timeLimit 
+    });
 
-    // シーンが準備できたらデータを渡して開始
-    game.scene.start('MainScene', { mapData });
+    phaserRef.current = game;
 
     return () => {
-      game.destroy(true); // コンポーネント破棄時にゲームも終了
+      if (phaserRef.current) {
+        phaserRef.current.destroy(true);
+        phaserRef.current = null;
+      }
     };
-  }, [mapData]);
+  }, [mapData, timeLimit]);
 
-  return <div ref={gameRef} className="border-4 border-gray-700 rounded-lg overflow-hidden" />;
+  return <div ref={containerRef} className="border-4 border-gray-700 rounded-lg overflow-hidden" />;
 }
