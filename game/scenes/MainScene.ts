@@ -54,6 +54,34 @@ export class MainScene extends Phaser.Scene {
     if (this.input.keyboard) {
       this.cursors = this.input.keyboard.createCursorKeys();
     }
+
+// --- create() メソッドの後半部分 ---
+
+    // 1. マップの全体サイズを計算
+    const mapWidth = this.mapData[0].length * this.tileSize;
+    const mapHeight = this.mapData.length * this.tileSize;
+    const screenWidth = this.scale.width;
+    const screenHeight = this.scale.height;
+
+    // 2. 物理エンジンの境界はマップサイズに合わせる
+    this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
+
+    // 3. マップが画面より「大きい」か「小さい」かで処理を分ける
+    if (mapWidth > screenWidth || mapHeight > screenHeight) {
+      // マップが画面より大きい場合：カメラの移動範囲を制限し、プレイヤーを追従
+      this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
+      if (this.player) {
+        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+      }
+    } else {
+      // マップが画面より小さい場合：カメラを固定し、中心にオフセットをかける
+      const offsetX = (screenWidth - mapWidth) / 2;
+      const offsetY = (screenHeight - mapHeight) / 2;
+      
+      // 重要：setBounds を設定しない、あるいは画面全体に広げる
+      this.cameras.main.removeBounds(); 
+      this.cameras.main.setScroll(-offsetX, -offsetY);
+    }
   }
 
   private createPlayer(x: number, y: number) {
