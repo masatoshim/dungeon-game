@@ -1,10 +1,11 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { MainScene } from '@/game/scenes/MainScene';
+import { TileType } from '@/types/game'; // パスは環境に合わせて調整
 
 interface GameCanvasProps {
-  mapData: number[][];
+  mapData: TileType[][];
 }
 
 export default function GameCanvas({ mapData }: GameCanvasProps) {
