@@ -5,7 +5,6 @@ export const GameUI = () => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
   useEffect(() => {
-    // any を使わず CustomEvent<number> と定義する
     const onTimeUpdate = (e: Event) => {
       const customEvent = e as CustomEvent<number>;
       setTimeLeft(customEvent.detail);

@@ -8,23 +8,23 @@ export const TILE_CATEGORIES = {
 } as const;
 
 export const TILE_CONFIG = {
-  'W':  { category: TILE_CATEGORIES.WALL, texture: 'tileset', frame: 0, isBreakable: false },
   'P':  { category: TILE_CATEGORIES.PLAYER, texture: 'player_idle', frame: 0 },
-  'G':  { category: TILE_CATEGORIES.GOAL, texture: 'tileset', frame: 5 },
+  'G':  { category: TILE_CATEGORIES.GOAL, texture: 'tileset', frame: 0 },
+  'W':  { category: TILE_CATEGORIES.WALL, texture: 'tileset', frame: 1, isBreakable: false },
   ' ':  { category: TILE_CATEGORIES.EMPTY },
   
   // 壁
   'BW1': { 
     category: TILE_CATEGORIES.WALL, 
     texture: 'tileset', 
-    frame: 10, 
+    frame: 2, 
     isBreakable: true, 
     hp: 1 
   },
   'BW3': { 
     category: TILE_CATEGORIES.WALL, 
     texture: 'tileset', 
-    frame: 11, 
+    frame: 3,
     isBreakable: true, 
     hp: 3 
   },
@@ -49,3 +49,9 @@ export const TILE_CONFIG = {
 } as const;
 
 export type TileId = keyof typeof TILE_CONFIG;
+
+export const ASSETS = {
+  tileset: '/assets/tileset.png',
+  player_idle: '/assets/player.png',
+  items: '/assets/items.png',
+} as const;

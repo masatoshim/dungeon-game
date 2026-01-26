@@ -6,7 +6,7 @@ async function main() {
 
   await prisma.dungeon.create({
     data: {
-      name: "はじまりの洞窟",
+      name: "sample dungeon",
       timeLimit: 100,
       difficulty: 1,
       mapData: JSON.stringify({
