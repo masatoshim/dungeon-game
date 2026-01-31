@@ -1,5 +1,5 @@
-import { TILE_CONFIG, TILE_CATEGORIES, TileId } from '@/types';
-import { Enemy } from '@/game/entities/Enemy';
+import { TILE_CONFIG, TILE_CATEGORIES, TileId } from "@/types";
+import { Enemy } from "@/game/entities/Enemy";
 
 interface LevelGroups {
   walls: Phaser.Physics.Arcade.StaticGroup;
@@ -10,7 +10,7 @@ interface LevelGroups {
   onPlayerCreate: (x: number, y: number) => void;
 }
 
-export class LevelManager {
+export class LevelBuilder {
   private tileSize: number = 32;
 
   constructor(private scene: Phaser.Scene) {}
@@ -22,7 +22,7 @@ export class LevelManager {
     mapData.forEach((row, y) => {
       row.forEach((tileId, x) => {
         const config = TILE_CONFIG[tileId];
-        
+
         // 設定がない、または空のタイルならスキップ
         if (!config || config.category === TILE_CATEGORIES.EMPTY) return;
 
@@ -41,30 +41,41 @@ export class LevelManager {
             break;
 
           case TILE_CATEGORIES.ITEM:
-            const item = this.scene.physics.add.staticSprite(posX, posY, config.texture, config.frame);
+            const item = this.scene.physics.add.staticSprite(
+              posX,
+              posY,
+              config.texture,
+              config.frame,
+            );
             if (config.itemType) {
-              item.setData('weaponId', config.itemType);
+              item.setData("weaponId", config.itemType);
             }
             groups.items.add(item);
             break;
-            
+
           case TILE_CATEGORIES.ENEMY:
             // Enemyクラスのインスタンスを生成してグループに追加
             const enemy = new Enemy(
-              this.scene, 
-              posX, 
-              posY, 
-              config.texture!, 
-              config.frame || 0, 
-              config.hp || 1
+              this.scene,
+              posX,
+              posY,
+              config.texture!,
+              config.frame || 0,
+              config.hp || 1,
             );
             groups.enemies.add(enemy);
             break;
 
           case TILE_CATEGORIES.GOAL:
-            const goal = this.scene.add.sprite(posX, posY, config.texture!, config.frame || 0);
+            const goal = this.scene.physics.add.staticSprite(
+              posX,
+              posY,
+              config.texture!,
+              config.frame || 0,
+            );
             groups.goal.add(goal);
-            (goal.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+            // updateFromGameObject を呼ぶことで、Bodyのサイズが32x32（スプライトサイズ）になる
+            goal.body.updateFromGameObject();
             break;
         }
       });
@@ -75,15 +86,19 @@ export class LevelManager {
    * 壁の生成ロジック
    */
   private createWall(x: number, y: number, config: any, groups: LevelGroups) {
-    const wall = this.scene.add.sprite(x, y, config.texture, config.frame);
-    
-    if ('isBreakable' in config && config.isBreakable) {
-      groups.breakableWalls.add(wall);
-      wall.setData('hp', config.hp);
-    } else {
-      groups.walls.add(wall);
+    const targetGroup = config.isBreakable
+      ? groups.breakableWalls
+      : groups.walls;
+    const wall = targetGroup.create(
+      x,
+      y,
+      config.texture,
+      config.frame,
+    ) as Phaser.Physics.Arcade.Sprite;
+    if (config.isBreakable) {
+      wall.setData("hp", config.hp);
     }
-    
-    (wall.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+    const body = wall.body as Phaser.Physics.Arcade.StaticBody;
+    body.updateFromGameObject();
   }
 }

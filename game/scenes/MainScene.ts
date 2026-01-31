@@ -1,19 +1,19 @@
-import * as Phaser from 'phaser';
-import { ASSETS, TileId } from '@/types'
-import { Player } from '@/game/entities/Player';
-import { Enemy } from '@/game/entities/Enemy';
-import { LevelManager } from '@/game/managers/LevelBuilder';
+import * as Phaser from "phaser";
+import { ASSETS, TileId, MapData, WeaponData } from "@/types";
+import { Player } from "@/game/entities/Player";
+import { Enemy } from "@/game/entities/Enemy";
+import { LevelBuilder } from "@/game/builders/LevelBuilder";
 
 export class MainScene extends Phaser.Scene {
   // データ管理
-  private mapData!: TileId[][];
+  private tiles!: TileId[][];
   private timeLeft: number = 0;
   private timerEvent?: Phaser.Time.TimerEvent;
   private tileSize: number = 32;
 
   // エンティティ・マネージャー
   private player!: Player;
-  private levelManager!: LevelManager;
+  private levelBuilder!: LevelBuilder;
 
   // 物理グループ
   private walls!: Phaser.Physics.Arcade.StaticGroup;
@@ -23,24 +23,23 @@ export class MainScene extends Phaser.Scene {
   private goalGroup!: Phaser.Physics.Arcade.StaticGroup;
 
   constructor() {
-    super('MainScene');
+    super("MainScene");
   }
 
   /**
    * シーン開始時の初期化
    */
-  init(data: { mapData: { tiles: TileId[][] }, timeLimit: number }) {
-    this.mapData = data.mapData.tiles;
+  init(data: { mapData: MapData; timeLimit: number }) {
+    this.tiles = data.mapData.tiles; // Todo: mapDataから取得できるプロパティは今後増える可能性がる。
     this.timeLeft = data.timeLimit ?? 60;
-    this.levelManager = new LevelManager(this);
+    this.levelBuilder = new LevelBuilder(this);
   }
-
   /**
    * アセットの読み込み
    */
   preload() {
     Object.entries(ASSETS).forEach(([key, path]) => {
-      if (key === 'tileset' || key === 'items') {
+      if (key === "tileset" || key === "items") {
         this.load.spritesheet(key, path, { frameWidth: 32, frameHeight: 32 });
       } else {
         this.load.image(key, path);
@@ -60,7 +59,7 @@ export class MainScene extends Phaser.Scene {
     this.goalGroup = this.physics.add.staticGroup();
 
     // LevelManagerを使用してマップ配置
-    this.levelManager.createLevel(this.mapData, {
+    this.levelBuilder.createLevel(this.tiles, {
       walls: this.walls,
       breakableWalls: this.breakableWalls,
       items: this.items,
@@ -69,8 +68,10 @@ export class MainScene extends Phaser.Scene {
       // プレイヤー生成用の関数を渡す
       onPlayerCreate: (x, y) => {
         this.player = new Player(this, x, y);
-        this.player.setOnAttack((ax, ay, dir) => this.handleAttack(ax, ay, dir));
-      }
+        this.player.setOnAttack((ax, ay, dir, w) =>
+          this.handleAttack(ax, ay, dir, w),
+        );
+      },
     });
 
     // アイテム・物理・カメラ・タイマーの設定
@@ -90,13 +91,19 @@ export class MainScene extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.breakableWalls);
 
     // 重なり判定（Overlap）
-    this.physics.add.overlap(this.player, this.enemies, () => this.player.playDamageEffect(), undefined, this);
-    this.physics.add.overlap(this.player, this.goalGroup, this.handleGoal, undefined, this);
+    this.physics.add.overlap(
+      this.player,
+      this.enemies,
+      () => this.player.playDamageEffect(),
+      undefined,
+      this,
+    );
   }
 
   private setupCamera() {
-    const mapWidth = this.mapData[0].length * this.tileSize;
-    const mapHeight = this.mapData.length * this.tileSize;
+    const firstRow = this.tiles[0] || [];
+    const mapWidth = firstRow.length * this.tileSize;
+    const mapHeight = this.tiles.length * this.tileSize;
     this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
 
     if (mapWidth > this.scale.width || mapHeight > this.scale.height) {
@@ -105,7 +112,10 @@ export class MainScene extends Phaser.Scene {
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     } else {
       // マップを画面の中央に
-      this.cameras.main.setScroll(-(this.scale.width - mapWidth) / 2, -(this.scale.height - mapHeight) / 2);
+      this.cameras.main.setScroll(
+        -(this.scale.width - mapWidth) / 2,
+        -(this.scale.height - mapHeight) / 2,
+      );
     }
   }
 
@@ -114,26 +124,40 @@ export class MainScene extends Phaser.Scene {
       delay: 1000,
       callback: () => {
         this.timeLeft--;
-        window.dispatchEvent(new CustomEvent('update-time', { detail: this.timeLeft }));
+        window.dispatchEvent(
+          new CustomEvent("update-time", { detail: this.timeLeft }),
+        );
         if (this.timeLeft <= 0) this.handleGameOver("TIME UP!");
       },
-      loop: true
+      loop: true,
     });
   }
 
   /**
    * 攻撃ヒット時の判定
    */
-  private handleAttack(x: number, y: number, direction: { x: number; y: number }, weapon?: any) {
+  private handleAttack(
+    x: number,
+    y: number,
+    direction: { x: number; y: number },
+    weapon?: WeaponData,
+  ) {
     // 武器がない場合のデフォルト値、または武器の range を使用
     const range = weapon ? weapon.range : 24;
     const size = weapon ? weapon.size : 20;
     const damage = weapon ? weapon.damage : 1;
 
-    const attackX = x + (direction.x * range);
-    const attackY = y + (direction.y * range);
-    
-    const hitArea = this.add.rectangle(attackX, attackY, size, size, 0xffff00, 0);
+    const attackX = x + direction.x * range;
+    const attackY = y + direction.y * range;
+
+    const hitArea = this.add.rectangle(
+      attackX,
+      attackY,
+      size,
+      size,
+      0xffff00,
+      0,
+    );
     this.physics.add.existing(hitArea);
 
     this.physics.overlap(hitArea, this.enemies, (_, target) => {
@@ -153,14 +177,19 @@ export class MainScene extends Phaser.Scene {
    * 壁などの汎用ダメージ処理
    */
   private handleObjectDamage(target: Phaser.GameObjects.Sprite) {
-    const hp = target.getData('hp') - 1;
+    const hp = target.getData("hp") - 1;
     if (hp <= 0) {
       target.destroy();
     } else {
-      target.setData('hp', hp);
+      target.setData("hp", hp);
       target.setTint(0xff0000);
       this.time.delayedCall(100, () => target.clearTint());
-      this.tweens.add({ targets: target, x: target.x + 2, duration: 50, yoyo: true });
+      this.tweens.add({
+        targets: target,
+        x: target.x + 2,
+        duration: 50,
+        yoyo: true,
+      });
     }
   }
 
@@ -170,9 +199,54 @@ export class MainScene extends Phaser.Scene {
     this.physics.pause();
     this.player.setTint(0x00ff00);
 
-    window.dispatchEvent(new CustomEvent('game-clear', { 
-      detail: { score: this.timeLeft } 
-    }));
+    // カメラを少しズーム
+    this.cameras.main.zoomTo(1.2, 1000, "Power2");
+
+    // クリア演出の実行
+    this.showClearUI();
+
+    window.dispatchEvent(
+      new CustomEvent("game-clear", {
+        detail: { score: this.timeLeft },
+      }),
+    );
+  }
+
+  private showClearUI() {
+    const { width, height } = this.scale;
+
+    // Todo: 画像に差し替える
+    const container = this.add
+      .container(width / 2, height / 2)
+      .setScrollFactor(0);
+
+    // テキスト（将来の画像）
+    const msg = this.add
+      .text(0, -50, "STAGE CLEAR!", {
+        fontSize: "64px",
+        color: "#ffff00",
+        stroke: "#000000",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5);
+
+    const score = this.add
+      .text(0, 20, `TIME BONUS: ${this.timeLeft}`, {
+        fontSize: "32px",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5);
+
+    container.add([msg, score]);
+    container.setScale(0);
+
+    this.tweens.add({
+      targets: container,
+      scale: 1,
+      duration: 800,
+      ease: "Back.easeOut",
+      delay: 200,
+    });
   }
 
   private handleGameOver(message: string) {
@@ -189,7 +263,7 @@ export class MainScene extends Phaser.Scene {
       this.items, // LevelBuilderで作成されたアイテムグループ
       this.handleItemPickup,
       undefined,
-      this
+      this,
     );
   }
 
@@ -197,7 +271,7 @@ export class MainScene extends Phaser.Scene {
   private handleItemPickup(playerObj: any, itemObj: any) {
     const player = playerObj as Player;
     const item = itemObj as Phaser.Physics.Arcade.Sprite;
-    const weaponId = item.getData('weaponId');
+    const weaponId = item.getData("weaponId");
 
     if (weaponId) {
       player.equipWeapon(weaponId);
@@ -208,6 +282,28 @@ export class MainScene extends Phaser.Scene {
   update() {
     if (this.player) {
       this.player.update();
+      this.checkGoalCondition();
+    }
+  }
+
+  private checkGoalCondition() {
+    if (this.timerEvent?.paused) return;
+
+    const goals = this.goalGroup.getChildren() as Phaser.GameObjects.Sprite[];
+    for (const goal of goals) {
+      const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+      const goalBody = goal.body as Phaser.Physics.Arcade.StaticBody;
+
+      const isContained =
+        playerBody.left >= goalBody.left &&
+        playerBody.right <= goalBody.right &&
+        playerBody.top >= goalBody.top &&
+        playerBody.bottom <= goalBody.bottom;
+
+      if (isContained) {
+        this.handleGoal();
+        return;
+      }
     }
   }
 }

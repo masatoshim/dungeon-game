@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from "@/lib/prisma";
 
 async function main() {
   // 既存データを削除してクリーンにする
@@ -7,19 +7,22 @@ async function main() {
   await prisma.dungeon.create({
     data: {
       name: "sample dungeon",
+      description: "samplesamplesamplesample",
       timeLimit: 100,
       difficulty: 1,
+      createdBy: "sampleuser",
+      updatedBy: "sampleuser",
       mapData: JSON.stringify({
         tiles: [
-          ['W', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
-          ['W', 'P', ' ', ' ', ' ', ' ', 'S1', 'W'],
-          ['W', 'W', 'W', 'BW3', 'W', 'W', ' ', 'W'],
-          ['W', ' ', ' ', ' ', ' ', 'BW1', ' ', 'W'],
-          ['W', ' ', 'BW3', 'W', ' ', ' ', 'G', 'W'],
-          ['W', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
-        ]
-      })
-    }
+          ["W", "W", "W", "W", "W", "W", "W", "W"],
+          ["W", "P", " ", " ", " ", " ", "S1", "W"],
+          ["W", "W", "W", "BW3", "W", "W", " ", "W"],
+          ["W", " ", " ", " ", " ", "BW1", " ", "W"],
+          ["W", " ", "BW3", "W", " ", " ", "G", "W"],
+          ["W", "W", "W", "W", "W", "W", "W", "W"],
+        ],
+      }),
+    },
   });
   console.log("Seed data created successfully!");
 }

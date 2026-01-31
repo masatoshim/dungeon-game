@@ -9,13 +9,16 @@ datasource db {
 
 
 model Dungeon {
-  id          String   @id @default(uuid())
-  name        String
+  id           String   @id @default(uuid())
+  name         String
+  description  String?  
   // マップデータはJSON形式の文字列として保存
   // Todo:PostgreSQL移行時は Json 型に
-  mapData     String   
-  timeLimit   Int      @default(60)
-  difficulty  Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  mapData      String   
+  timeLimit    Int      @default(60)
+  difficulty   Int      @default(1)  
+  createdBy    String
+  updatedBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
