@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
-import { ASSETS, TileId } from '@/types/game';
+import { ASSETS, TileId } from '@/types'
 import { Player } from '@/game/entities/Player';
 import { Enemy } from '@/game/entities/Enemy';
-import { LevelManager } from '@/game/managers/LevelManager';
+import { LevelManager } from '@/game/managers/LevelBuilder';
 
 export class MainScene extends Phaser.Scene {
   // データ管理
@@ -63,6 +63,7 @@ export class MainScene extends Phaser.Scene {
     this.levelManager.createLevel(this.mapData, {
       walls: this.walls,
       breakableWalls: this.breakableWalls,
+      items: this.items,
       enemies: this.enemies,
       goal: this.goalGroup,
       // プレイヤー生成用の関数を渡す
@@ -72,7 +73,8 @@ export class MainScene extends Phaser.Scene {
       }
     });
 
-    // 物理・カメラ・タイマーの設定
+    // アイテム・物理・カメラ・タイマーの設定
+    this.setupItemCollisions();
     this.setupPhysics();
     this.setupCamera();
     this.startCountdown();
@@ -98,9 +100,11 @@ export class MainScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
 
     if (mapWidth > this.scale.width || mapHeight > this.scale.height) {
+      // プレイヤーの追従（マップが画面より大きい場合のみ有効に機能する）
       this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     } else {
+      // マップを画面の中央に
       this.cameras.main.setScroll(-(this.scale.width - mapWidth) / 2, -(this.scale.height - mapHeight) / 2);
     }
   }
@@ -120,21 +124,25 @@ export class MainScene extends Phaser.Scene {
   /**
    * 攻撃ヒット時の判定
    */
-  private handleAttack(x: number, y: number, direction: { x: number; y: number }) {
-    const attackX = x + (direction.x * 24);
-    const attackY = y + (direction.y * 24);
+  private handleAttack(x: number, y: number, direction: { x: number; y: number }, weapon?: any) {
+    // 武器がない場合のデフォルト値、または武器の range を使用
+    const range = weapon ? weapon.range : 24;
+    const size = weapon ? weapon.size : 20;
+    const damage = weapon ? weapon.damage : 1;
+
+    const attackX = x + (direction.x * range);
+    const attackY = y + (direction.y * range);
     
-    // 攻撃判定用の透明な矩形
-    const hitArea = this.add.rectangle(attackX, attackY, 20, 20, 0xffff00, 0);
+    const hitArea = this.add.rectangle(attackX, attackY, size, size, 0xffff00, 0);
     this.physics.add.existing(hitArea);
 
-    // 敵へのヒット
     this.physics.overlap(hitArea, this.enemies, (_, target) => {
-      if (target instanceof Enemy) target.takeDamage(1);
+      // Todo: 武器の攻撃力を適用
+      if (target instanceof Enemy) target.takeDamage(damage);
     });
 
-    // 壊せる壁へのヒット
     this.physics.overlap(hitArea, this.breakableWalls, (_, wall) => {
+      // Todo: 必要に応じてここも武器の攻撃力を渡すように修正
       this.handleObjectDamage(wall as Phaser.GameObjects.Sprite);
     });
 
@@ -172,6 +180,29 @@ export class MainScene extends Phaser.Scene {
     this.physics.pause();
     this.player.setTint(0x555555);
     console.log(message);
+  }
+
+  private setupItemCollisions() {
+    // player と items グループの接触を監視
+    this.physics.add.overlap(
+      this.player,
+      this.items, // LevelBuilderで作成されたアイテムグループ
+      this.handleItemPickup,
+      undefined,
+      this
+    );
+  }
+
+  // アイテムを拾った時の処理
+  private handleItemPickup(playerObj: any, itemObj: any) {
+    const player = playerObj as Player;
+    const item = itemObj as Phaser.Physics.Arcade.Sprite;
+    const weaponId = item.getData('weaponId');
+
+    if (weaponId) {
+      player.equipWeapon(weaponId);
+      item.destroy();
+    }
   }
 
   update() {

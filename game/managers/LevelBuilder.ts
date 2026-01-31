@@ -1,9 +1,10 @@
-import { TILE_CONFIG, TILE_CATEGORIES, TileId } from '@/types/game';
+import { TILE_CONFIG, TILE_CATEGORIES, TileId } from '@/types';
 import { Enemy } from '@/game/entities/Enemy';
 
 interface LevelGroups {
   walls: Phaser.Physics.Arcade.StaticGroup;
   breakableWalls: Phaser.Physics.Arcade.StaticGroup;
+  items: Phaser.Physics.Arcade.StaticGroup;
   enemies: Phaser.Physics.Arcade.Group;
   goal: Phaser.Physics.Arcade.StaticGroup;
   onPlayerCreate: (x: number, y: number) => void;
@@ -39,6 +40,14 @@ export class LevelManager {
             groups.onPlayerCreate(posX, posY);
             break;
 
+          case TILE_CATEGORIES.ITEM:
+            const item = this.scene.physics.add.staticSprite(posX, posY, config.texture, config.frame);
+            if (config.itemType) {
+              item.setData('weaponId', config.itemType);
+            }
+            groups.items.add(item);
+            break;
+            
           case TILE_CATEGORIES.ENEMY:
             // Enemyクラスのインスタンスを生成してグループに追加
             const enemy = new Enemy(

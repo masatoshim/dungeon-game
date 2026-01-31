@@ -23,7 +23,7 @@ export default function GameCanvas({ mapData, timeLimit }: GameCanvasProps) {
       parent: containerRef.current,
       physics: { 
         default: 'arcade',
-        arcade: { debug: false } // 当たり判定表示
+        arcade: { debug: true } // 当たり判定表示
       },
     };
 

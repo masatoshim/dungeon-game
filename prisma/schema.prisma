@@ -12,6 +12,7 @@ model Dungeon {
   id          String   @id @default(uuid())
   name        String
   // マップデータはJSON形式の文字列として保存
+  // Todo:PostgreSQL移行時は Json 型に
   mapData     String   
   timeLimit   Int      @default(60)
   difficulty  Int      @default(1)
