@@ -1,7 +1,7 @@
 // game/entities/Player.ts
 
 import * as Phaser from "phaser";
-import { WeaponData, WEAPONS } from "@/types";
+import { WeaponData } from "@/types";
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private arcadeBody: Phaser.Physics.Arcade.Body;
@@ -102,11 +102,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  public equipWeapon(weaponId: string) {
-    if (WEAPONS[weaponId]) {
-      this.currentWeapon = WEAPONS[weaponId];
-      console.log(`${this.currentWeapon.name} を装備した！`);
-    }
+  public equipWeapon(weapon: WeaponData) {
+    this.currentWeapon = weapon;
+    console.log(`${weapon.name} を装備した！`);
   }
 
   public playDamageEffect() {

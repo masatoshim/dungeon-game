@@ -1,33 +1,46 @@
 import { prisma } from "@/lib/prisma";
+import { PlayerInventory } from "./item";
 
 export type Dungeon = NonNullable<
   Awaited<ReturnType<typeof prisma.dungeon.findUnique>>
 >;
 
-export type TileId = string;
+export interface EntityData {
+  id: string; // 一意のID（ボタンと扉の紐付け用など）
+  type:
+    | "ROCK"
+    | "IRON_BALL"
+    | "ICE"
+    | "BUTTON"
+    | "DOOR"
+    | "KEY"
+    | "SWITCH"
+    | "LIGHT";
+  x: number;
+  y: number;
+  properties?: {
+    // 各ギミック固有の設定
+    targetId?: string; // ボタンが操作する扉のID
+    useCount?: number; // 使用回数制限
+    isLocked?: boolean; // 最初から鍵がかかっているか
+  };
+}
 
 export interface MapData {
-  tiles: TileId[][];
-  // Todo: 将来的に拡張があり得る
+  tiles: string[][];
+  entities: EntityData[]; // 動的なオブジェクトはここに集約
+  settings: {
+    isDark: boolean; // 初期状態が真っ暗かどうか
+    ambientLight: number; // 明るさの度合い
+  };
 }
 
-export interface TileConfig {
-  category: string;
-  texture: string;
-  frame: number;
-  isBreakable?: boolean;
-  hp?: number;
-  itemType?: string;
-  enemyType?: string;
-}
-
-export interface WeaponData {
-  id: string;
-  name: string;
-  range: number;
-  size: number;
-  damage: number;
-  cooldown: number;
+// ゲームの実行時状態
+export interface GameState {
+  inventory: PlayerInventory;
+  isDark: boolean;
+  score: number;
+  status: "PLAYING" | "GAMEOVER" | "CLEAR";
 }
 
 export interface EnemyData {

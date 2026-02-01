@@ -2,22 +2,22 @@ import { prisma } from "@/lib/prisma";
 
 async function main() {
   // 既存データを削除してクリーンにする
-  await prisma.dungeon.deleteMany();
+  // await prisma.dungeon.deleteMany();
 
   await prisma.dungeon.create({
     data: {
-      name: "sample dungeon",
+      name: "sample dungeon2",
       description: "samplesamplesamplesample",
       timeLimit: 100,
       difficulty: 1,
-      createdBy: "sampleuser",
-      updatedBy: "sampleuser",
+      createdBy: "system",
+      updatedBy: "system",
       mapData: JSON.stringify({
         tiles: [
           ["W", "W", "W", "W", "W", "W", "W", "W"],
           ["W", "P", " ", " ", " ", " ", "S1", "W"],
           ["W", "W", "W", "BW3", "W", "W", " ", "W"],
-          ["W", " ", " ", " ", " ", "BW1", " ", "W"],
+          ["W", " ", " ", "R1", " ", "BW1", " ", "W"],
           ["W", " ", "BW3", "W", " ", " ", "G", "W"],
           ["W", "W", "W", "W", "W", "W", "W", "W"],
         ],
