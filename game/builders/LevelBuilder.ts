@@ -129,13 +129,7 @@ export class LevelBuilder {
       config.frame,
     );
 
-    rock.setImmovable(false);
-    rock.setPushable(true);
-    rock.setDrag(1000);
-    rock.setMass(10);
-    rock.setBounce(0);
-    rock.setCollideWorldBounds(true);
-
     groups.movableStones.add(rock);
+    rock.setDrag(2000);
   }
 }

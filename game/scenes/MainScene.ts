@@ -80,13 +80,6 @@ export class MainScene extends Phaser.Scene {
         this.setupCamera();
       },
     });
-
-    this.physics.add.collider(this.movableStones, this.walls);
-    this.physics.add.collider(this.movableStones, this.movableStones);
-    this.physics.add.collider(this.enemies, this.walls);
-    this.physics.add.collider(this.enemies, this.breakableWalls);
-    this.physics.add.collider(this.enemies, this.movableStones);
-
     this.startCountdown();
   }
 
@@ -97,6 +90,11 @@ export class MainScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.walls);
     this.physics.add.collider(this.player, this.breakableWalls);
     this.physics.add.collider(this.player, this.movableStones);
+    this.physics.add.collider(this.movableStones, this.walls);
+    this.physics.add.collider(this.movableStones, this.movableStones);
+    this.physics.add.collider(this.enemies, this.walls);
+    this.physics.add.collider(this.enemies, this.breakableWalls);
+    this.physics.add.collider(this.enemies, this.movableStones);
 
     // 重なり判定（Overlap）
     this.physics.add.overlap(
