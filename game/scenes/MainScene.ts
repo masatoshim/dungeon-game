@@ -82,6 +82,7 @@ export class MainScene extends Phaser.Scene {
       movableStones: this.movableStones,
       onPlayerCreate: (x, y) => {
         this.player = new Player(this, x, y);
+        this.player.setDepth(10);
         this.player.setOnAttack((ax, ay, dir, w) => this.handleAttack(ax, ay, dir, w));
       },
     };

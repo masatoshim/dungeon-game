@@ -35,6 +35,11 @@ export class LevelBuilder {
         const posY = y * this.tileSize + this.tileSize / 2;
 
         switch (config.category) {
+          case TILE_CATEGORIES.PLAYER:
+            // プレイヤーの初期位置をシーンに報告
+            groups.onPlayerCreate(posX, posY);
+            break;
+
           case TILE_CATEGORIES.WALL:
             this.createWall(posX, posY, config, groups);
             break;
@@ -55,11 +60,6 @@ export class LevelBuilder {
             }
             // 扉をグループに追加（MainSceneから渡されたグループ）
             groups.doors.add(door);
-            break;
-
-          case TILE_CATEGORIES.PLAYER:
-            // プレイヤーの初期位置をシーンに報告
-            groups.onPlayerCreate(posX, posY);
             break;
 
           case TILE_CATEGORIES.ITEM:
@@ -90,6 +90,7 @@ export class LevelBuilder {
             groups.goal.add(goal);
             // updateFromGameObject を呼ぶことで、Bodyのサイズが32x32（スプライトサイズ）になる
             goal.body.updateFromGameObject();
+            goal.setDepth(1);
             break;
         }
       });
@@ -149,6 +150,9 @@ export class LevelBuilder {
         if (targetDoor) {
           connections.push({ button, door: targetDoor });
         }
+
+        // ボタンを石やプレイヤーより下に配置 (デフォルトは 0 なので、少し低くするか他を高くする)
+        button.setDepth(1);
       });
 
     // カギの生成
@@ -195,5 +199,7 @@ export class LevelBuilder {
     // stone.setSize(31, 31); // 挙動不安定
     stone.setDrag(config.stoneData?.drag ?? 100);
     // stone.setCircle(16); // 挙動不安定
+    // 石をボタンより上に表示
+    stone.setDepth(10);
   }
 }
