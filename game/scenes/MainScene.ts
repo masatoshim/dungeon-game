@@ -1,14 +1,8 @@
 import * as Phaser from "phaser";
-import {
-  ASSETS,
-  MapData,
-  WeaponData,
-  TileConfig,
-  GimmickConnection,
-} from "@/types";
+import { ASSETS, MapData, WeaponData, TileConfig, GimmickConnection } from "@/types";
 import { Player } from "@/game/entities/Player";
 import { Enemy } from "@/game/entities/Enemy";
-import { LevelBuilder } from "@/game/builders/LevelBuilder";
+import { LevelBuilder, LevelGroups } from "@/game/builders/LevelBuilder";
 
 export class MainScene extends Phaser.Scene {
   // データ管理
@@ -51,13 +45,7 @@ export class MainScene extends Phaser.Scene {
    */
   preload() {
     Object.entries(ASSETS).forEach(([key, path]) => {
-      if (
-        key === "tileset" ||
-        key === "items" ||
-        key === "stones" ||
-        key === "doors" ||
-        key === "buttons"
-      ) {
+      if (key === "tileset" || key === "items" || key === "stones" || key === "doors" || key === "buttons") {
         this.load.spritesheet(key, path, { frameWidth: 32, frameHeight: 32 });
       } else {
         this.load.image(key, path);
@@ -84,14 +72,7 @@ export class MainScene extends Phaser.Scene {
     this.movableStones = this.physics.add.group();
     this.doors = this.physics.add.staticGroup();
 
-    this.gimmickConnections = this.levelBuilder.createGimmicks(
-      this,
-      this.mapData.entities,
-      this.doors,
-    );
-
-    // LevelManagerを使用してマップ配置
-    this.levelBuilder.createLevel(this.tiles, {
+    const levelGroups: LevelGroups = {
       walls: this.walls,
       doors: this.doors,
       breakableWalls: this.breakableWalls,
@@ -99,18 +80,22 @@ export class MainScene extends Phaser.Scene {
       enemies: this.enemies,
       goal: this.goalGroup,
       movableStones: this.movableStones,
-      // プレイヤー生成用の関数を渡す
       onPlayerCreate: (x, y) => {
         this.player = new Player(this, x, y);
-        this.player.setOnAttack((ax, ay, dir, w) =>
-          this.handleAttack(ax, ay, dir, w),
-        );
-        // プレイヤー生成後に物理や衝突を設定する
-        this.setupItemCollisions();
-        this.setupPhysics();
-        this.setupCamera();
+        this.player.setOnAttack((ax, ay, dir, w) => this.handleAttack(ax, ay, dir, w));
       },
-    });
+    };
+
+    // LevelManagerを使用してマップ配置
+    this.levelBuilder.createLevel(this.tiles, levelGroups);
+
+    // 次に createGimmicks を実行（鍵や扉が生成される）
+    this.gimmickConnections = this.levelBuilder.createGimmicks(this, this.mapData.entities, levelGroups);
+
+    this.setupItemCollisions(); // アイテム判定
+    this.setupPhysics(); // 壁や敵との衝突判定
+    this.setupCamera(); // カメラ設定
+
     this.startCountdown();
   }
 
@@ -126,7 +111,6 @@ export class MainScene extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.breakableWalls);
     this.physics.add.collider(this.enemies, this.movableStones);
 
-    // 扉の衝突判定（鍵チェック）
     this.physics.add.collider(this.player, this.doors, (p, d) => {
       const door = d as Phaser.Physics.Arcade.Sprite;
       const doorId = door.getData("id");
@@ -134,26 +118,57 @@ export class MainScene extends Phaser.Scene {
       if (door.getData("isLocked") && this.player.hasKeyFor(doorId)) {
         this.player.useKeyFor(doorId);
 
-        // constants で設定した openFrame を使用。なければデフォルト 0
+        door.setData("isLocked", false);
         const frame = door.getData("openFrame") ?? 0;
         door.setFrame(frame);
-
         door.setAlpha(0.3);
-        (door.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+        if (door.body) {
+          (door.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+        }
       }
     });
 
     // 石と扉の衝突（石は鍵を開けられないので、単純な Collider）
     this.physics.add.collider(this.movableStones, this.doors);
 
-    // --- 重なり判定（Overlap） ---
-    this.physics.add.overlap(
-      this.player,
-      this.enemies,
-      () => this.player.playDamageEffect(),
-      undefined,
-      this,
-    );
+    // プレイヤーと敵が触れた時の判定
+    // this.physics.add.overlap(this.player,this.enemies,() => this.player.playDamageEffect(),undefined,this,);
+    this.physics.add.overlap(this.player, this.enemies, this.handlePlayerDeath, undefined, this);
+  }
+
+  /**
+   * プレイヤーが死亡した時の処理
+   */
+  private handlePlayerDeath(playerObj: any, enemyObj: any) {
+    // すでにゲームオーバー状態なら何もしない
+    if (!this.player.active) return;
+
+    console.log("GAME OVER!");
+
+    // 物理演算を停止
+    this.physics.pause();
+
+    // プレイヤーを赤くして、動きを止める
+    const player = playerObj as Player;
+    player.setTint(0xff0000); // ToDo: 画像差し替え
+    player.active = false;
+
+    // 画面中央に「GAME OVER」テキストを表示
+    const { width, height } = this.scale;
+    const gameOverText = this.add
+      .text(width / 2, height / 2, "GAME OVER", {
+        fontSize: "48px",
+        color: "#ff0000",
+        fontStyle: "bold",
+        stroke: "#000",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5);
+
+    // 数秒後にシーンをリスタートさせる
+    // this.time.delayedCall(2000, () => {
+    //   this.scene.restart();
+    // });
   }
 
   private setupCamera() {
@@ -168,10 +183,7 @@ export class MainScene extends Phaser.Scene {
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     } else {
       // マップを画面の中央に
-      this.cameras.main.setScroll(
-        -(this.scale.width - mapWidth) / 2,
-        -(this.scale.height - mapHeight) / 2,
-      );
+      this.cameras.main.setScroll(-(this.scale.width - mapWidth) / 2, -(this.scale.height - mapHeight) / 2);
     }
   }
 
@@ -180,9 +192,7 @@ export class MainScene extends Phaser.Scene {
       delay: 1000,
       callback: () => {
         this.timeLeft--;
-        window.dispatchEvent(
-          new CustomEvent("update-time", { detail: this.timeLeft }),
-        );
+        window.dispatchEvent(new CustomEvent("update-time", { detail: this.timeLeft }));
         if (this.timeLeft <= 0) this.handleGameOver("TIME UP!");
       },
       loop: true,
@@ -192,12 +202,7 @@ export class MainScene extends Phaser.Scene {
   /**
    * 攻撃ヒット時の判定
    */
-  private handleAttack(
-    x: number,
-    y: number,
-    direction: { x: number; y: number },
-    weapon?: WeaponData,
-  ) {
+  private handleAttack(x: number, y: number, direction: { x: number; y: number }, weapon?: WeaponData) {
     const range = weapon ? weapon.range : 24;
     const size = weapon ? weapon.size : 20;
     const damage = weapon ? weapon.damage : 1;
@@ -206,14 +211,7 @@ export class MainScene extends Phaser.Scene {
     const attackY = y + direction.y * range;
 
     // 攻撃判定用の不可視オブジェクト
-    const hitArea = this.add.rectangle(
-      attackX,
-      attackY,
-      size,
-      size,
-      0xffff00,
-      0,
-    );
+    const hitArea = this.add.rectangle(attackX, attackY, size, size, 0xffff00, 0);
     this.physics.add.existing(hitArea);
 
     // 敵へのダメージ
@@ -276,9 +274,7 @@ export class MainScene extends Phaser.Scene {
     const { width, height } = this.scale;
 
     // Todo: 画像に差し替える
-    const container = this.add
-      .container(width / 2, height / 2)
-      .setScrollFactor(0);
+    const container = this.add.container(width / 2, height / 2).setScrollFactor(0);
 
     // テキスト（将来の画像）
     const msg = this.add
@@ -332,30 +328,34 @@ export class MainScene extends Phaser.Scene {
   private handleItemPickup(playerObj: any, itemObj: any) {
     const player = playerObj as Player;
     const itemSprite = itemObj as Phaser.Physics.Arcade.Sprite;
-    const config = itemSprite.getData("config") as TileConfig;
+    const config = itemSprite.getData("config") as any; // 一旦 any で構造の違いを許容
 
-    if (config && config.item) {
+    if (!config) return;
+
+    // 鍵のパターン
+    if (config.item && config.item.type === "KEY") {
       const itemData = config.item;
-
-      if (itemData.type === "KEY") {
-        // 鍵を拾った時の処理
-        if (itemData.targetDoorId) {
-          player.addKey(itemData.targetDoorId);
-          itemSprite.destroy();
-          console.log(
-            `${itemData.name}を拾った！(対応扉: ${itemData.targetDoorId})`,
-          );
-        } else {
-          console.warn("拾った鍵に対応する扉IDが設定されていません。");
-        }
-        return;
-      }
-
-      if (itemData.type === "WEAPON" && itemData.weaponData) {
-        player.equipWeapon(itemData.weaponData);
+      if (itemData.targetDoorId) {
+        player.addKey(itemData.targetDoorId);
         itemSprite.destroy();
+        console.log(`${itemData.name}を拾った！`);
       }
+      return;
     }
+
+    // 武器のパターン
+    if (config.weaponData) {
+      player.equipWeapon(config.weaponData);
+      itemSprite.destroy();
+      console.log(`${config.weaponData.name}を装備した！`);
+      return;
+    }
+
+    // if (config.item && config.item.type === "WEAPON" && config.item.weaponData) {
+    //   player.equipWeapon(config.item.weaponData);
+    //   itemSprite.destroy();
+    //   return;
+    // }
   }
 
   update() {
@@ -366,30 +366,26 @@ export class MainScene extends Phaser.Scene {
 
     this.gimmickConnections.forEach((conn) => {
       const { button, door } = conn;
-      const isPressed =
-        this.physics.overlap(this.player, button) ||
-        this.physics.overlap(this.movableStones, button);
 
-      const doorBody = door.body as Phaser.Physics.Arcade.StaticBody;
+      if (door.getData("isLocked") === false) return;
 
-      // 扉のフレーム設定
+      const isPressed = this.physics.overlap(this.player, button) || this.physics.overlap(this.movableStones, button);
+
       const dOpen = door.getData("openFrame") ?? 0;
       const dClosed = door.getData("closedFrame") ?? 1;
-
-      // ボタンのフレーム設定
       const bOpen = button.getData("openFrame") ?? 1;
       const bClosed = button.getData("closedFrame") ?? 0;
 
       if (isPressed) {
-        button.setFrame(bOpen); // 設定値を使用
+        button.setFrame(bOpen);
         door.setFrame(dOpen);
         door.setAlpha(0.3);
-        if (doorBody) doorBody.enable = false;
+        if (door.body) (door.body as Phaser.Physics.Arcade.StaticBody).enable = false;
       } else {
-        button.setFrame(bClosed); // 設定値を使用
+        button.setFrame(bClosed);
         door.setFrame(dClosed);
         door.setAlpha(1.0);
-        if (doorBody) doorBody.enable = true;
+        if (door.body) (door.body as Phaser.Physics.Arcade.StaticBody).enable = true;
       }
     });
   }

@@ -12,8 +12,7 @@ export const TILE_CATEGORIES = {
   GOAL: "GOAL",
 } as const;
 
-export type TileCategory =
-  (typeof TILE_CATEGORIES)[keyof typeof TILE_CATEGORIES];
+export type TileCategory = (typeof TILE_CATEGORIES)[keyof typeof TILE_CATEGORIES];
 
 export interface TileConfig {
   category: TileCategory;

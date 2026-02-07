@@ -5,4 +5,5 @@ export const ASSETS = {
   buttons: "/assets/buttons.png",
   items: "/assets/items.png",
   player_idle: "/assets/player.png",
+  enemies: "/assets/enemies.png",
 } as const;

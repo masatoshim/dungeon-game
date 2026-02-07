@@ -7,11 +7,7 @@ const GameCanvas = dynamic(() => import("@/components/GameCanvas"), {
 });
 const GameUI = dynamic(() => import("@/components/GameUI"), { ssr: false });
 
-export default async function PlayPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ id?: string }>;
-}) {
+export default async function PlayPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const { id } = await searchParams;
 
   if (!id) return notFound();
@@ -35,16 +31,10 @@ export default async function PlayPage({
 
       <div className="mt-6 p-4 bg-gray-800 rounded-lg w-full max-w-2xl border border-gray-700">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-xl font-semibold text-yellow-500">
-            難易度: {dungeon.difficulty}
-          </span>
-          <span className="text-xl font-semibold text-blue-400">
-            制限時間: {dungeon.timeLimit}s
-          </span>
+          <span className="text-xl font-semibold text-yellow-500">難易度: {dungeon.difficulty}</span>
+          <span className="text-xl font-semibold text-blue-400">制限時間: {dungeon.timeLimit}s</span>
         </div>
-        <p className="text-gray-300 italic mb-4">
-          {dungeon.description || "説明はありません"}
-        </p>
+        <p className="text-gray-300 italic mb-4">{dungeon.description || "説明はありません"}</p>
         <div className="text-sm text-gray-400 bg-gray-900 p-2 rounded">
           🎮 操作: 矢印キーで移動 / スペースキーで攻撃
         </div>

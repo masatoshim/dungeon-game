@@ -111,6 +111,12 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
     category: TILE_CATEGORIES.ENEMY,
     texture: "enemies",
     frame: 0,
-    enemyData: { id: "E_SLIME", name: "スライム", hp: 1 },
+    enemyData: {
+      id: "E_SLIME",
+      name: "スライム",
+      hp: 1,
+      moveType: "RANDOM",
+      speed: 60,
+    },
   },
 };

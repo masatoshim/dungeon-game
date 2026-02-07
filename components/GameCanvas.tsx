@@ -44,10 +44,5 @@ export default function GameCanvas({ mapData, timeLimit }: GameCanvasProps) {
     };
   }, [mapData, timeLimit]);
 
-  return (
-    <div
-      ref={containerRef}
-      className="border-4 border-gray-700 rounded-lg overflow-hidden"
-    />
-  );
+  return <div ref={containerRef} className="border-4 border-gray-700 rounded-lg overflow-hidden" />;
 }

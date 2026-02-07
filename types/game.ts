@@ -1,21 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { PlayerInventory } from "./item";
 
-export type Dungeon = NonNullable<
-  Awaited<ReturnType<typeof prisma.dungeon.findUnique>>
->;
+export type Dungeon = NonNullable<Awaited<ReturnType<typeof prisma.dungeon.findUnique>>>;
 
 export interface EntityData {
   id: string; // 一意のID（ボタンと扉の紐付け用など）
-  type:
-    | "ROCK"
-    | "IRON_BALL"
-    | "ICE"
-    | "BUTTON"
-    | "DOOR"
-    | "KEY"
-    | "SWITCH"
-    | "LIGHT";
+  type: "ROCK" | "IRON_BALL" | "ICE" | "BUTTON" | "DOOR" | "KEY" | "SWITCH" | "LIGHT";
   x: number;
   y: number;
   properties?: {
@@ -48,6 +38,8 @@ export interface EnemyData {
   id: string;
   name: string;
   hp?: number;
+  moveType?: "RANDOM" | "HORIZONTAL"; // Todo: Typeはこれから増える見込み
+  speed?: number;
 }
 
 export interface GimmickConnection {

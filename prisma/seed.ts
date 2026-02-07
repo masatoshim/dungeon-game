@@ -9,8 +9,7 @@ async function main() {
   await prisma.dungeon.create({
     data: {
       name: "シンプル",
-      description:
-        "開始位置からゴールまで制限時間内にゴールするだけのシンプルなダンジョン",
+      description: "開始位置からゴールまで制限時間内にゴールするだけのシンプルなダンジョン",
       timeLimit: 10,
       difficulty: 1,
       status: "PUBLISHED",
@@ -150,6 +149,29 @@ async function main() {
             y: 4,
             properties: { tileId: "B1", targetId: "door_A" },
           },
+        ],
+      }),
+    },
+  });
+
+  await prisma.dungeon.create({
+    data: {
+      name: "スライム徘徊",
+      description: "スライム徘徊するダンジョン",
+      timeLimit: 120,
+      difficulty: 1,
+      status: "PUBLISHED",
+      isTemplate: true,
+      createdBy: "system",
+      updatedBy: "system",
+      mapData: JSON.stringify({
+        tiles: [
+          ["W", "W", "W", "W", "W", "W"],
+          ["W", "P", " ", " ", " ", "W"],
+          ["W", "S1", " ", " ", "E1", "W"],
+          ["W", " ", " ", "W", " ", "W"],
+          ["W", " ", " ", "W", "G", "W"],
+          ["W", "W", "W", "W", "W", "W"],
         ],
       }),
     },

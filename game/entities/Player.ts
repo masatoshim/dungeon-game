@@ -46,9 +46,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // 入力設定
     this.cursors = scene.input.keyboard!.createCursorKeys();
-    this.spaceKey = scene.input.keyboard!.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SPACE,
-    );
+    this.spaceKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
   }
 
   // 鍵の管理用メソッドを更新
@@ -69,14 +67,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  public setOnAttack(
-    callback: (
-      x: number,
-      y: number,
-      dir: { x: number; y: number },
-      weapon: WeaponData,
-    ) => void,
-  ) {
+  public setOnAttack(callback: (x: number, y: number, dir: { x: number; y: number }, weapon: WeaponData) => void) {
     this.attackCallback = callback;
   }
 
@@ -116,12 +107,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isAttacking = true;
 
     if (this.attackCallback) {
-      this.attackCallback(
-        this.x,
-        this.y,
-        this.lastDirection,
-        this.currentWeapon,
-      );
+      this.attackCallback(this.x, this.y, this.lastDirection, this.currentWeapon);
     }
 
     this.scene.time.delayedCall(this.currentWeapon.cooldown, () => {
@@ -141,10 +127,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     console.log(`${weapon.name} を装備した！`);
   }
 
-  public playDamageEffect() {
-    if (!this.isTinted) {
-      this.setTint(0xff0000);
-      this.scene.time.delayedCall(200, () => this.clearTint());
-    }
-  }
+  // public playDamageEffect() {
+  //   if (!this.isTinted) {
+  //     this.setTint(0xff0000);
+  //     this.scene.time.delayedCall(200, () => this.clearTint());
+  //   }
+  // }
 }
