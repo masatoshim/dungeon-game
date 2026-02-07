@@ -167,6 +167,9 @@ export class LevelBuilder {
         button.setFrame(config.frame);
         button.setImmovable(true);
 
+        button.setData("openFrame", config.openFrame); // 押された時の画像
+        button.setData("closedFrame", config.frame); // 通常時の画像
+
         if (button.body instanceof Phaser.Physics.Arcade.Body) {
           button.body.setSize(18, 18);
         }

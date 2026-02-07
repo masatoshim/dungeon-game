@@ -372,18 +372,22 @@ export class MainScene extends Phaser.Scene {
 
       const doorBody = door.body as Phaser.Physics.Arcade.StaticBody;
 
-      // Dataからフレーム番号を取得 (設定がなければデフォルト 0 と 1)
-      const openFrame = door.getData("openFrame") ?? 0;
-      const closedFrame = door.getData("closedFrame") ?? 1;
+      // 扉のフレーム設定
+      const dOpen = door.getData("openFrame") ?? 0;
+      const dClosed = door.getData("closedFrame") ?? 1;
+
+      // ボタンのフレーム設定
+      const bOpen = button.getData("openFrame") ?? 1;
+      const bClosed = button.getData("closedFrame") ?? 0;
 
       if (isPressed) {
-        button.setFrame(1); // ボタンが押された画像
-        door.setFrame(openFrame);
+        button.setFrame(bOpen); // 設定値を使用
+        door.setFrame(dOpen);
         door.setAlpha(0.3);
         if (doorBody) doorBody.enable = false;
       } else {
-        button.setFrame(0); // ボタンが離れた画像
-        door.setFrame(closedFrame);
+        button.setFrame(bClosed); // 設定値を使用
+        door.setFrame(dClosed);
         door.setAlpha(1.0);
         if (doorBody) doorBody.enable = true;
       }

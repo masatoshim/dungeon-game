@@ -58,6 +58,7 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
     category: TILE_CATEGORIES.GIMMICK,
     texture: "buttons",
     frame: 0,
+    openFrame: 1, // 押された時
   },
 
   // ギミック：扉
