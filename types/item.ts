@@ -14,14 +14,14 @@ export interface Item {
   maxUses?: number;
   remainingUses?: number;
   weaponData?: WeaponData;
-  // 特定のカテゴリの壁を壊せるかなどのフラグ
-  canBreakWalls?: boolean;
+  targetDoorId?: string; // 鍵が対応する扉のID
+  canBreakWalls?: boolean; // 特定のカテゴリの壁を壊せるかなどのフラグ
   consumesOnUse?: boolean; // 使用時に消費するか（鍵など）
 }
 
 export interface PlayerInventory {
   weapon: Item | null;
   hasLight: boolean;
-  keys: number;
+  keys: string[];
   items: Item[];
 }

@@ -1,10 +1,18 @@
 // game/entities/Player.ts
 
 import * as Phaser from "phaser";
-import { WeaponData } from "@/types";
+import { WeaponData, PlayerInventory } from "@/types";
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private arcadeBody: Phaser.Physics.Arcade.Body;
+
+  // インベントリの初期化
+  private inventory: PlayerInventory = {
+    weapon: null,
+    hasLight: false,
+    keys: [],
+    items: [],
+  };
 
   // 現在の装備
   private currentWeapon: WeaponData | null = null;
@@ -41,6 +49,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.spaceKey = scene.input.keyboard!.addKey(
       Phaser.Input.Keyboard.KeyCodes.SPACE,
     );
+  }
+
+  // 鍵の管理用メソッドを更新
+  public addKey(targetDoorId: string) {
+    (this.inventory.keys as any as string[]).push(targetDoorId);
+    console.log(`扉 ${targetDoorId} の鍵を取得`);
+  }
+
+  public hasKeyFor(doorId: string): boolean {
+    return (this.inventory.keys as any as string[]).includes(doorId);
+  }
+
+  public useKeyFor(doorId: string) {
+    const keys = this.inventory.keys as any as string[];
+    const index = keys.indexOf(doorId);
+    if (index > -1) {
+      keys.splice(index, 1);
+    }
   }
 
   public setOnAttack(
@@ -105,6 +131,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   public equipWeapon(weapon: WeaponData) {
     this.currentWeapon = weapon;
+    // インベントリ側も更新しておく
+    this.inventory.weapon = {
+      id: weapon.id,
+      name: weapon.name,
+      type: "WEAPON",
+      weaponData: weapon,
+    };
     console.log(`${weapon.name} を装備した！`);
   }
 

@@ -77,6 +77,84 @@ async function main() {
     },
   });
 
+  await prisma.dungeon.create({
+    data: {
+      name: "鍵と扉",
+      description: "鍵を手に入れて扉を開くダンジョン",
+      timeLimit: 120,
+      difficulty: 1,
+      status: "PUBLISHED",
+      isTemplate: true,
+      createdBy: "system",
+      updatedBy: "system",
+      mapData: JSON.stringify({
+        tiles: [
+          ["W", "W", "W", "W", "W", "W"],
+          ["W", "P", " ", " ", " ", "W"],
+          ["W", " ", " ", " ", " ", "W"],
+          ["W", " ", " ", "W", " ", "W"],
+          ["W", " ", " ", "W", "G", "W"],
+          ["W", "W", "W", "W", "W", "W"],
+        ],
+        entities: [
+          {
+            id: "door_A",
+            type: "DOOR",
+            x: 4,
+            y: 3,
+            properties: { tileId: "KD1", targetId: "key_A" }, // 鍵扉を指定
+          },
+          {
+            id: "key_A",
+            type: "KEY",
+            x: 2,
+            y: 2,
+            properties: { tileId: "K1", targetId: "door_A" }, // 鍵を指定
+          },
+        ],
+      }),
+    },
+  });
+
+  await prisma.dungeon.create({
+    data: {
+      name: "ボタンと扉",
+      description: "ボタンを押して扉を開くダンジョン",
+      timeLimit: 120,
+      difficulty: 1,
+      status: "PUBLISHED",
+      isTemplate: true,
+      createdBy: "system",
+      updatedBy: "system",
+      mapData: JSON.stringify({
+        tiles: [
+          ["W", "W", "W", "W", "W", "W"],
+          ["W", "P", " ", " ", " ", "W"],
+          ["W", " ", " ", " ", " ", "W"],
+          ["W", "R1", " ", "W", " ", "W"],
+          ["W", " ", " ", "W", "G", "W"],
+          ["W", "W", "W", "W", "W", "W"],
+        ],
+        entities: [
+          {
+            id: "door_A",
+            type: "DOOR",
+            x: 4,
+            y: 3,
+            properties: { tileId: "D1" },
+          },
+          {
+            id: "btn_A",
+            type: "BUTTON",
+            x: 1,
+            y: 4,
+            properties: { tileId: "B1", targetId: "door_A" },
+          },
+        ],
+      }),
+    },
+  });
+
   console.log("Seed data created successfully!");
 }
 

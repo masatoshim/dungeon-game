@@ -1,6 +1,8 @@
 export const ASSETS = {
   tileset: "/assets/tileset.png",
-  stone: "/assets/stone.png",
+  stones: "/assets/stones.png",
+  doors: "/assets/doors.png",
+  buttons: "/assets/buttons.png",
   items: "/assets/items.png",
   player_idle: "/assets/player.png",
 } as const;

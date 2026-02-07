@@ -1,5 +1,5 @@
 import { EnemyData, StoneData } from "./game";
-import { WeaponData } from "./item";
+import { WeaponData, Item } from "./item";
 
 export const TILE_CATEGORIES = {
   EMPTY: "EMPTY",
@@ -8,6 +8,7 @@ export const TILE_CATEGORIES = {
   PLAYER: "PLAYER",
   ENEMY: "ENEMY",
   ITEM: "ITEM",
+  GIMMICK: "GIMMICK",
   GOAL: "GOAL",
 } as const;
 
@@ -18,9 +19,12 @@ export interface TileConfig {
   category: TileCategory;
   texture: string;
   frame: number;
+  openFrame?: number;
   isBreakable?: boolean;
+  isLocked?: boolean;
   hp?: number;
   enemyData?: EnemyData;
+  item?: Item;
   weaponData?: WeaponData;
   stoneData?: StoneData;
 }

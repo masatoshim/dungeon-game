@@ -21,6 +21,7 @@ export interface EntityData {
   properties?: {
     // 各ギミック固有の設定
     targetId?: string; // ボタンが操作する扉のID
+    tileId?: string;
     useCount?: number; // 使用回数制限
     isLocked?: boolean; // 最初から鍵がかかっているか
   };
@@ -47,6 +48,11 @@ export interface EnemyData {
   id: string;
   name: string;
   hp?: number;
+}
+
+export interface GimmickConnection {
+  button: Phaser.Physics.Arcade.Sprite;
+  door: Phaser.Physics.Arcade.Sprite;
 }
 
 export interface StoneData {

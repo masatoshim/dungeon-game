@@ -25,7 +25,7 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
   // 石
   R1: {
     category: TILE_CATEGORIES.STONE,
-    texture: "stone",
+    texture: "stones",
     frame: 0,
     stoneData: {
       drag: 1000,
@@ -36,7 +36,7 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
   // 鉄球
   // R2: {
   //   category: TILE_CATEGORIES.STONE,
-  //   texture: "stone",
+  //   texture: "stones",
   //   frame: 1,
   //   stoneData: {
   //     drag: 2000,
@@ -46,14 +46,51 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
   // 氷
   R3: {
     category: TILE_CATEGORIES.STONE,
-    texture: "stone",
+    texture: "stones",
     frame: 2,
     stoneData: {
       drag: 10,
     },
   },
 
-  // アイテム
+  // ギミック：ボタン
+  B1: {
+    category: TILE_CATEGORIES.GIMMICK,
+    texture: "buttons",
+    frame: 0,
+  },
+
+  // ギミック：扉
+  D1: {
+    category: TILE_CATEGORIES.GIMMICK,
+    texture: "doors",
+    frame: 1,
+    openFrame: 0,
+  },
+
+  // ギミック：鍵扉
+  KD1: {
+    category: TILE_CATEGORIES.GIMMICK,
+    texture: "doors",
+    frame: 3,
+    openFrame: 2,
+    isLocked: true,
+  },
+
+  // アイテム：鍵
+  K1: {
+    category: TILE_CATEGORIES.ITEM,
+    texture: "items",
+    frame: 1,
+    item: {
+      id: "KEY_SILVER",
+      name: "銀の鍵",
+      type: "KEY",
+      consumesOnUse: true,
+    },
+  },
+
+  // アイテム：武器
   S1: {
     category: TILE_CATEGORIES.ITEM,
     texture: "items",

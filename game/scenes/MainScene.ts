@@ -1,5 +1,11 @@
 import * as Phaser from "phaser";
-import { ASSETS, MapData, WeaponData, TileConfig } from "@/types";
+import {
+  ASSETS,
+  MapData,
+  WeaponData,
+  TileConfig,
+  GimmickConnection,
+} from "@/types";
 import { Player } from "@/game/entities/Player";
 import { Enemy } from "@/game/entities/Enemy";
 import { LevelBuilder } from "@/game/builders/LevelBuilder";
@@ -14,14 +20,18 @@ export class MainScene extends Phaser.Scene {
   // エンティティ・マネージャー
   private player!: Player;
   private levelBuilder!: LevelBuilder;
+  private mapData!: MapData;
 
   // 物理グループ
   private walls!: Phaser.Physics.Arcade.StaticGroup;
+  private doors!: Phaser.Physics.Arcade.StaticGroup;
   private breakableWalls!: Phaser.Physics.Arcade.StaticGroup;
   private items!: Phaser.Physics.Arcade.StaticGroup;
   private enemies!: Phaser.Physics.Arcade.Group;
   private movableStones!: Phaser.Physics.Arcade.Group;
   private goalGroup!: Phaser.Physics.Arcade.StaticGroup;
+
+  private gimmickConnections: GimmickConnection[] = [];
 
   constructor() {
     super("MainScene");
@@ -31,6 +41,7 @@ export class MainScene extends Phaser.Scene {
    * シーン開始時の初期化
    */
   init(data: { mapData: MapData; timeLimit: number }) {
+    this.mapData = data.mapData;
     this.tiles = data.mapData.tiles; // Todo: mapDataから取得できるプロパティは今後増える可能性がある。
     this.timeLeft = data.timeLimit ?? 60;
     this.levelBuilder = new LevelBuilder(this);
@@ -40,9 +51,14 @@ export class MainScene extends Phaser.Scene {
    */
   preload() {
     Object.entries(ASSETS).forEach(([key, path]) => {
-      if (key === "tileset" || key === "items" || key === "stone") {
+      if (
+        key === "tileset" ||
+        key === "items" ||
+        key === "stones" ||
+        key === "doors" ||
+        key === "buttons"
+      ) {
         this.load.spritesheet(key, path, { frameWidth: 32, frameHeight: 32 });
-      } else if (key === "tileset" || key === "items" || key === "stone") {
       } else {
         this.load.image(key, path);
       }
@@ -66,10 +82,18 @@ export class MainScene extends Phaser.Scene {
     this.enemies = this.physics.add.group();
     this.goalGroup = this.physics.add.staticGroup();
     this.movableStones = this.physics.add.group();
+    this.doors = this.physics.add.staticGroup();
+
+    this.gimmickConnections = this.levelBuilder.createGimmicks(
+      this,
+      this.mapData.entities,
+      this.doors,
+    );
 
     // LevelManagerを使用してマップ配置
     this.levelBuilder.createLevel(this.tiles, {
       walls: this.walls,
+      doors: this.doors,
       breakableWalls: this.breakableWalls,
       items: this.items,
       enemies: this.enemies,
@@ -93,7 +117,6 @@ export class MainScene extends Phaser.Scene {
   private setupPhysics() {
     if (!this.player) return;
 
-    // 衝突判定（Collider）
     this.physics.add.collider(this.player, this.walls);
     this.physics.add.collider(this.player, this.breakableWalls);
     this.physics.add.collider(this.player, this.movableStones);
@@ -103,7 +126,27 @@ export class MainScene extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.breakableWalls);
     this.physics.add.collider(this.enemies, this.movableStones);
 
-    // 重なり判定（Overlap）
+    // 扉の衝突判定（鍵チェック）
+    this.physics.add.collider(this.player, this.doors, (p, d) => {
+      const door = d as Phaser.Physics.Arcade.Sprite;
+      const doorId = door.getData("id");
+
+      if (door.getData("isLocked") && this.player.hasKeyFor(doorId)) {
+        this.player.useKeyFor(doorId);
+
+        // constants で設定した openFrame を使用。なければデフォルト 0
+        const frame = door.getData("openFrame") ?? 0;
+        door.setFrame(frame);
+
+        door.setAlpha(0.3);
+        (door.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+      }
+    });
+
+    // 石と扉の衝突（石は鍵を開けられないので、単純な Collider）
+    this.physics.add.collider(this.movableStones, this.doors);
+
+    // --- 重なり判定（Overlap） ---
     this.physics.add.overlap(
       this.player,
       this.enemies,
@@ -288,15 +331,30 @@ export class MainScene extends Phaser.Scene {
   // アイテムを拾った時の処理
   private handleItemPickup(playerObj: any, itemObj: any) {
     const player = playerObj as Player;
-    const item = itemObj as Phaser.Physics.Arcade.Sprite;
+    const itemSprite = itemObj as Phaser.Physics.Arcade.Sprite;
+    const config = itemSprite.getData("config") as TileConfig;
 
-    const config = item.getData("config") as TileConfig;
+    if (config && config.item) {
+      const itemData = config.item;
 
-    if (config && config.weaponData) {
-      player.equipWeapon(config.weaponData);
+      if (itemData.type === "KEY") {
+        // 鍵を拾った時の処理
+        if (itemData.targetDoorId) {
+          player.addKey(itemData.targetDoorId);
+          itemSprite.destroy();
+          console.log(
+            `${itemData.name}を拾った！(対応扉: ${itemData.targetDoorId})`,
+          );
+        } else {
+          console.warn("拾った鍵に対応する扉IDが設定されていません。");
+        }
+        return;
+      }
 
-      // Todo:必要に応じてアイテム消費時のエフェクトをここに追加
-      item.destroy();
+      if (itemData.type === "WEAPON" && itemData.weaponData) {
+        player.equipWeapon(itemData.weaponData);
+        itemSprite.destroy();
+      }
     }
   }
 
@@ -305,6 +363,31 @@ export class MainScene extends Phaser.Scene {
       this.player.update();
       this.checkGoalCondition();
     }
+
+    this.gimmickConnections.forEach((conn) => {
+      const { button, door } = conn;
+      const isPressed =
+        this.physics.overlap(this.player, button) ||
+        this.physics.overlap(this.movableStones, button);
+
+      const doorBody = door.body as Phaser.Physics.Arcade.StaticBody;
+
+      // Dataからフレーム番号を取得 (設定がなければデフォルト 0 と 1)
+      const openFrame = door.getData("openFrame") ?? 0;
+      const closedFrame = door.getData("closedFrame") ?? 1;
+
+      if (isPressed) {
+        button.setFrame(1); // ボタンが押された画像
+        door.setFrame(openFrame);
+        door.setAlpha(0.3);
+        if (doorBody) doorBody.enable = false;
+      } else {
+        button.setFrame(0); // ボタンが離れた画像
+        door.setFrame(closedFrame);
+        door.setAlpha(1.0);
+        if (doorBody) doorBody.enable = true;
+      }
+    });
   }
 
   private checkGoalCondition() {
