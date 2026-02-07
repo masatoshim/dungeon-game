@@ -40,8 +40,9 @@ export class MainScene extends Phaser.Scene {
    */
   preload() {
     Object.entries(ASSETS).forEach(([key, path]) => {
-      if (key === "tileset" || key === "items" || key === "circle") {
+      if (key === "tileset" || key === "items" || key === "stone") {
         this.load.spritesheet(key, path, { frameWidth: 32, frameHeight: 32 });
+      } else if (key === "tileset" || key === "items" || key === "stone") {
       } else {
         this.load.image(key, path);
       }
@@ -52,6 +53,12 @@ export class MainScene extends Phaser.Scene {
    * ゲーム画面の構築
    */
   create() {
+    // 計算頻度を上げる
+    this.physics.world.setFPS(120);
+    // 1フレームでの最大移動量を制限する
+    this.physics.world.OVERLAP_BIAS = 4;
+    // めり込み許容距離をタイルの厚み+1に合わせる
+    this.physics.world.TILE_BIAS = 33;
     // 各グループの作成
     this.walls = this.physics.add.staticGroup();
     this.breakableWalls = this.physics.add.staticGroup();

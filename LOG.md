@@ -56,10 +56,13 @@ npx prisma migrate dev --name init
 ### prisma操作
 
 DB参照
+※または、dev.dbをクリック
 
 ```
 npx prisma studio
 ```
+
+サンプルデータ作成
 
 ```
 npx tsx prisma/seed.ts
@@ -102,3 +105,13 @@ npx prisma generate
 ```
 npx prisma db push --force-reset
 ```
+
+2026/02/07
+今後の拡張例：
+DRAFT: 作成中。本人にしか見えない。
+PUBLISHED: 公開中。誰でも遊べる。
+PRIVATE: リンクを知っている人だけ遊べる（合言葉など）。
+ARCHIVED: 公開終了。ランキング閲覧のみ。
+BANNED: 規約違反などで運営が差し止めた状態。
+
+enum に新しい値を追加して npx prisma migrate dev を実行する

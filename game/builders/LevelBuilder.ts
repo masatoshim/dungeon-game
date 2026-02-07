@@ -111,6 +111,7 @@ export class LevelBuilder {
     if (config.isBreakable) {
       wall.setData("hp", config.hp);
     }
+    wall.setMass(9999);
 
     const body = wall.body as Phaser.Physics.Arcade.StaticBody;
     body.updateFromGameObject();
@@ -122,14 +123,21 @@ export class LevelBuilder {
     config: TileConfig,
     groups: LevelGroups,
   ) {
-    const rock = this.scene.physics.add.sprite(
+    const stone = this.scene.physics.add.sprite(
       x,
       y,
       config.texture,
       config.frame,
     );
 
-    groups.movableStones.add(rock);
-    rock.setDrag(2000);
+    groups.movableStones.add(stone);
+    stone.setPushable(true);
+    stone.setMass(1); // プレイヤーより重く設定
+    stone.setBounce(0); // 反発を0にして振動を防ぐ
+    // stone.setDamping(true); // 挙動不安定
+    // stone.setFriction(0, 0); // 挙動不安定
+    // stone.setSize(31, 31); // 挙動不安定
+    stone.setDrag(config.stoneData?.drag ?? 100);
+    // stone.setCircle(16); // 挙動不安定
   }
 }

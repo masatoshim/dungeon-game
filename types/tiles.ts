@@ -1,4 +1,4 @@
-import { EnemyData } from "./game";
+import { EnemyData, StoneData } from "./game";
 import { WeaponData } from "./item";
 
 export const TILE_CATEGORIES = {
@@ -22,4 +22,5 @@ export interface TileConfig {
   hp?: number;
   enemyData?: EnemyData;
   weaponData?: WeaponData;
+  stoneData?: StoneData;
 }

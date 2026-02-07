@@ -48,3 +48,7 @@ export interface EnemyData {
   name: string;
   hp?: number;
 }
+
+export interface StoneData {
+  drag: number; // 空気抵抗・摩擦（ブレーキ）
+}

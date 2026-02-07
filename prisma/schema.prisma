@@ -7,18 +7,32 @@ datasource db {
   provider = "sqlite"
 }
 
+enum DungeonStatus {
+  DRAFT
+  PUBLISHED
+  PRIVATE
+  ARCHIVED
+}
+
 
 model Dungeon {
   id           String   @id @default(uuid())
   name         String
   description  String?  
-  // マップデータはJSON形式の文字列として保存
-  // Todo:PostgreSQL移行時は Json 型に
-  mapData      String   
+  mapData      String   // JSONデータ
   timeLimit    Int      @default(60)
   difficulty   Int      @default(1)  
-  createdBy    String
+  status       DungeonStatus @default(DRAFT) // DRAFT, PUBLISHED, PRIVATE
+  isTemplate   Boolean  @default(false)   // 公式が用意した雛形かどうか
+  playCount    Int      @default(0)       // 人気順ソート用
+  clearCount   Int      @default(0)       // クリア率算出用
+  likes        Int      @default(0)       // 評価機能
+  version      Int      @default(1)       // マップ更新時のバージョン管理用
+  createdBy    String   @default("system")
   updatedBy    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([createdBy])
+  @@index([status])
 }

@@ -25,8 +25,32 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
   // 石
   R1: {
     category: TILE_CATEGORIES.STONE,
-    texture: "circle",
+    texture: "stone",
     frame: 0,
+    stoneData: {
+      drag: 1000,
+    },
+  },
+
+  // Todo: 物理演算に不具合があるため、保留
+  // 鉄球
+  // R2: {
+  //   category: TILE_CATEGORIES.STONE,
+  //   texture: "stone",
+  //   frame: 1,
+  //   stoneData: {
+  //     drag: 2000,
+  //   },
+  // },
+
+  // 氷
+  R3: {
+    category: TILE_CATEGORIES.STONE,
+    texture: "stone",
+    frame: 2,
+    stoneData: {
+      drag: 10,
+    },
   },
 
   // アイテム
