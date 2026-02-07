@@ -15,6 +15,7 @@ export const TILE_CATEGORIES = {
 export type TileCategory = (typeof TILE_CATEGORIES)[keyof typeof TILE_CATEGORIES];
 
 export interface TileConfig {
+  name: string;
   category: TileCategory;
   texture: string;
   frame: number;

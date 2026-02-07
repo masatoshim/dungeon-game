@@ -348,7 +348,7 @@ export class MainScene extends Phaser.Scene {
     if (config.weaponData) {
       player.equipWeapon(config.weaponData);
       itemSprite.destroy();
-      console.log(`${config.weaponData.name}を装備した！`);
+      console.log(`${config.name}を装備した！`);
       return;
     }
 

@@ -14,6 +14,15 @@ export default async function Home() {
           DUNGEON EXPLORER
         </h1>
 
+        <div className="flex justify-center mb-12">
+          <Link
+            href="/new"
+            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full font-bold text-xl hover:scale-110 transition-transform shadow-[0_0_20px_rgba(37,99,235,0.4)]"
+          >
+            ＋ 新しいダンジョンを創る
+          </Link>
+        </div>
+
         <div className="grid gap-6 sm:grid-cols-2">
           {dungeons.map((dungeon) => (
             <Link
