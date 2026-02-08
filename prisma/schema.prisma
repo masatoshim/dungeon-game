@@ -14,7 +14,6 @@ enum DungeonStatus {
   ARCHIVED
 }
 
-
 model Dungeon {
   id           String   @id @default(uuid())
   name         String
