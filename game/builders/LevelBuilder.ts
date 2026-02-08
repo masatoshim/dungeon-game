@@ -14,13 +14,13 @@ export interface LevelGroups {
 
 export class LevelBuilder {
   private tileSize: number = 32;
-
-  private doorMap = new Map();
+  private doorMap = new Map<string, Phaser.GameObjects.Sprite | Phaser.GameObjects.Image>();
 
   constructor(private scene: Phaser.Scene) {}
 
   /**
    * マップデータを解析して、各種オブジェクトを生成・グループ化する
+   * 基本的にタイル配列（mapData）に基づいた静的な配置を行う
    */
   public createLevel(mapData: string[][], groups: LevelGroups) {
     mapData.forEach((row, y) => {
@@ -45,29 +45,23 @@ export class LevelBuilder {
             break;
 
           case TILE_CATEGORIES.STONE:
-            // 石専用の生成メソッドを呼ぶ
+            this.createMovableStone(posX, posY, config, groups);
+            break;
+
+          case TILE_CATEGORIES.ICE:
             this.createMovableStone(posX, posY, config, groups);
             break;
 
           case TILE_CATEGORIES.GIMMICK:
-            const door = this.scene.physics.add.staticSprite(posX, posY, config.texture, config.frame);
-            // constants から取得した値をそのまま保存
-            if (config.openFrame !== undefined) {
-              door.setData("openFrame", config.openFrame);
+            // 扉系のタイルID（KD1など）であれば生成
+            // 鍵は Entity 側で生成するため、ここでは ID で判定
+            if (tileId.startsWith("KD")) {
+              this.createDoorFromConfig(posX, posY, config, groups);
             }
-            if (config.isLocked) {
-              door.setData("isLocked", true);
-            }
-            // 扉をグループに追加（MainSceneから渡されたグループ）
-            groups.doors.add(door);
             break;
 
           case TILE_CATEGORIES.ITEM:
-            const item = this.scene.physics.add.staticSprite(posX, posY, config.texture, config.frame);
-            item.setData("config", config);
-            groups.items.add(item);
-
-            (item.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+            this.createItemFromConfig(posX, posY, config, groups);
             break;
 
           case TILE_CATEGORIES.ENEMY:
@@ -88,7 +82,6 @@ export class LevelBuilder {
           case TILE_CATEGORIES.GOAL:
             const goal = this.scene.physics.add.staticSprite(posX, posY, config.texture!, config.frame || 0);
             groups.goal.add(goal);
-            // updateFromGameObject を呼ぶことで、Bodyのサイズが32x32（スプライトサイズ）になる
             goal.body.updateFromGameObject();
             goal.setDepth(1);
             break;
@@ -97,23 +90,21 @@ export class LevelBuilder {
     });
   }
 
-  public createGimmicks(
-    scene: Phaser.Scene,
-    entities: EntityData[] = [],
-    groups: LevelGroups, // doorGroup ではなく groups まるごと受け取る
-  ): GimmickConnection[] {
+  /**
+   * エディタで配置された EntityData（鍵、扉、ボタン）を生成し、接続関係を構築する
+   */
+  public createGimmicks(scene: Phaser.Scene, entities: EntityData[] = [], groups: LevelGroups): GimmickConnection[] {
     if (!entities || !Array.isArray(entities)) return [];
 
     const connections: GimmickConnection[] = [];
     this.doorMap.clear();
 
-    // 扉の生成 (groups.doors を使用)
+    // 扉の生成
     entities
       .filter((e) => e.type === "DOOR")
       .forEach((e) => {
-        const tileId = e.properties?.tileId || "D1";
+        const tileId = e.properties?.tileId || "KD1";
         const config = TILE_CONFIG[tileId];
-        // シンプルな staticSprite 生成
         const door = scene.physics.add.staticSprite(e.x * 32 + 16, e.y * 32 + 16, config.texture);
 
         door.setFrame(config.frame);
@@ -137,8 +128,8 @@ export class LevelBuilder {
         button.setFrame(config.frame);
         button.setImmovable(true);
 
-        button.setData("openFrame", config.openFrame); // 押された時の画像
-        button.setData("closedFrame", config.frame); // 通常時の画像
+        button.setData("openFrame", config.openFrame);
+        button.setData("closedFrame", config.frame);
 
         if (button.body instanceof Phaser.Physics.Arcade.Body) {
           button.body.setSize(18, 18);
@@ -148,10 +139,9 @@ export class LevelBuilder {
         const targetDoor = targetId ? this.doorMap.get(targetId) : null;
 
         if (targetDoor) {
-          connections.push({ button, door: targetDoor });
+          connections.push({ button, door: targetDoor as Phaser.Physics.Arcade.Sprite });
         }
 
-        // ボタンを石やプレイヤーより下に配置 (デフォルトは 0 なので、少し低くするか他を高くする)
         button.setDepth(1);
       });
 
@@ -159,15 +149,52 @@ export class LevelBuilder {
     entities
       .filter((e) => e.type === "KEY")
       .forEach((e) => {
-        const keyItem = scene.physics.add.staticSprite(e.x * 32 + 16, e.y * 32 + 16, "items");
-        keyItem.setFrame(1);
+        const tileId = e.properties?.tileId || "K1";
+        const config = TILE_CONFIG[tileId];
+
+        // config からテクスチャとフレームを取得
+        const keyItem = scene.physics.add.staticSprite(
+          e.x * 32 + 16,
+          e.y * 32 + 16,
+          config.texture || "items",
+          config.frame ?? 1,
+        );
+
+        // 拾った際のアイテム情報と、エディタで設定した targetId をマージ
         keyItem.setData("config", {
-          item: { id: e.id, name: "カギ", type: "KEY", targetDoorId: e.properties?.targetId },
+          ...config,
+          item: {
+            ...config.item,
+            id: e.id,
+            targetDoorId: e.properties?.targetId, // 扉との紐付け
+          },
         });
+
         groups.items.add(keyItem);
+        (keyItem.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
       });
 
     return connections;
+  }
+
+  /**
+   * 扉生成用ヘルパー
+   */
+  private createDoorFromConfig(x: number, y: number, config: TileConfig, groups: LevelGroups) {
+    const door = this.scene.physics.add.staticSprite(x, y, config.texture, config.frame);
+    if (config.openFrame !== undefined) door.setData("openFrame", config.openFrame);
+    if (config.isLocked) door.setData("isLocked", true);
+    groups.doors.add(door);
+  }
+
+  /**
+   * アイテム生成用ヘルパー
+   */
+  private createItemFromConfig(x: number, y: number, config: TileConfig, groups: LevelGroups) {
+    const item = this.scene.physics.add.staticSprite(x, y, config.texture, config.frame);
+    item.setData("config", config);
+    groups.items.add(item);
+    (item.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
   }
 
   /**
@@ -175,7 +202,6 @@ export class LevelBuilder {
    */
   private createWall(x: number, y: number, config: TileConfig, groups: LevelGroups) {
     const targetGroup = config.isBreakable ? groups.breakableWalls : groups.walls;
-
     const wall = targetGroup.create(x, y, config.texture, config.frame) as Phaser.Physics.Arcade.Sprite;
 
     if (config.isBreakable) {
@@ -187,19 +213,23 @@ export class LevelBuilder {
     body.updateFromGameObject();
   }
 
+  /**
+   * 動かせる石・氷の生成ロジック
+   */
   private createMovableStone(x: number, y: number, config: TileConfig, groups: LevelGroups) {
     const stone = this.scene.physics.add.sprite(x, y, config.texture, config.frame);
 
+    // config全体を保存しておくことで、MainScene側で config.category === TILE_CATEGORIES.ICE が判定可能になる
+    stone.setData("config", config);
+    stone.setData("isMoving", false);
+
     groups.movableStones.add(stone);
-    stone.setPushable(true);
-    stone.setMass(1); // プレイヤーより重く設定
-    stone.setBounce(0); // 反発を0にして振動を防ぐ
-    // stone.setDamping(true); // 挙動不安定
-    // stone.setFriction(0, 0); // 挙動不安定
-    // stone.setSize(31, 31); // 挙動不安定
-    stone.setDrag(config.stoneData?.drag ?? 100);
-    // stone.setCircle(16); // 挙動不安定
-    // 石をボタンより上に表示
+
+    // Tween移動させるための物理無効化設定
+    stone.setImmovable(true);
+    stone.setPushable(false);
+
+    stone.body.setSize(32, 32);
     stone.setDepth(10);
   }
 }

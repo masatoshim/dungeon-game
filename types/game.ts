@@ -3,6 +3,15 @@ import { PlayerInventory } from "./item";
 
 export type Dungeon = NonNullable<Awaited<ReturnType<typeof prisma.dungeon.findUnique>>>;
 
+// ダンジョン設定のデフォルト値・制限値
+export const DUNGEON_DEFAULT = {
+  ROWS: 10,
+  COLS: 10,
+  TIME_LIMIT: 60,
+  MIN_SIZE: 4,
+  MAX_SIZE: 256,
+} as const;
+
 export interface EntityData {
   id: string; // 一意のID（ボタンと扉の紐付け用など）
   type: "ROCK" | "IRON_BALL" | "ICE" | "BUTTON" | "DOOR" | "KEY" | "SWITCH" | "LIGHT";

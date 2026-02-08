@@ -2,29 +2,31 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { TILE_CONFIG, EntityData, TileConfigKey } from "@/types";
+import { DUNGEON_DEFAULT, TILE_CONFIG, EntityData, TileConfigKey } from "@/types";
 import { TileIconForm } from "@/components/TileIconForm";
 import { EditorHeader } from "@/components/EditorHeader";
 import { TilePalette } from "@/components/TilePalette";
 
 export default function NewDungeonPage() {
   const router = useRouter();
-  const [rows, setRows] = useState(10);
-  const [cols, setCols] = useState(10);
+  const [rows, setRows] = useState<number>(DUNGEON_DEFAULT.ROWS);
+  const [cols, setCols] = useState<number>(DUNGEON_DEFAULT.COLS);
   const [config, setConfig] = useState({
     name: "",
     description: "",
-    timeLimit: 60,
+    timeLimit: DUNGEON_DEFAULT.TIME_LIMIT,
   });
 
   // 初期タイルを rows/cols と一致させる
   const [tiles, setTiles] = useState<string[][]>(() => {
-    return Array(10)
+    return Array(DUNGEON_DEFAULT.ROWS)
       .fill(0)
       .map((_, r) =>
-        Array(10)
+        Array(DUNGEON_DEFAULT.COLS)
           .fill(0)
-          .map((_, c) => (r === 0 || r === 9 || c === 0 || c === 9 ? "W" : "..")),
+          .map((_, c) =>
+            r === 0 || r === DUNGEON_DEFAULT.ROWS - 1 || c === 0 || c === DUNGEON_DEFAULT.COLS - 1 ? "W" : "..",
+          ),
       );
   });
 
@@ -39,9 +41,9 @@ export default function NewDungeonPage() {
 
   // タイルサイズ変更（EditorHeaderから呼ばれる）
   const updateTilesSize = (rawRows: number, rawCols: number) => {
-    // 空文字（NaN）や4未満をガードし、確定後の値を算出
-    const newRows = Math.max(4, rawRows || 4);
-    const newCols = Math.max(4, rawCols || 4);
+    // 空文字（NaN）や最小値未満をガードし、確定後の値を算出
+    const newRows = Math.max(DUNGEON_DEFAULT.MIN_SIZE, rawRows || DUNGEON_DEFAULT.MIN_SIZE);
+    const newCols = Math.max(DUNGEON_DEFAULT.MIN_SIZE, rawCols || DUNGEON_DEFAULT.MIN_SIZE);
 
     // ステートを更新（入力欄の表示用）
     setRows(newRows);
@@ -150,6 +152,7 @@ export default function NewDungeonPage() {
       });
       if (res.ok) router.push("/");
     } catch (e) {
+      console.log(`error:${e}`);
       alert("失敗");
     }
   };

@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { ASSETS, MapData, WeaponData, TileConfig, GimmickConnection } from "@/types";
+import { ASSETS, MapData, WeaponData, GimmickConnection } from "@/types";
 import { Player } from "@/game/entities/Player";
 import { Enemy } from "@/game/entities/Enemy";
 import { LevelBuilder, LevelGroups } from "@/game/builders/LevelBuilder";
@@ -31,18 +31,13 @@ export class MainScene extends Phaser.Scene {
     super("MainScene");
   }
 
-  /**
-   * シーン開始時の初期化
-   */
   init(data: { mapData: MapData; timeLimit: number }) {
     this.mapData = data.mapData;
-    this.tiles = data.mapData.tiles; // Todo: mapDataから取得できるプロパティは今後増える可能性がある。
+    this.tiles = data.mapData.tiles;
     this.timeLeft = data.timeLimit ?? 60;
     this.levelBuilder = new LevelBuilder(this);
   }
-  /**
-   * アセットの読み込み
-   */
+
   preload() {
     Object.entries(ASSETS).forEach(([key, path]) => {
       if (key === "tileset" || key === "items" || key === "stones" || key === "doors" || key === "buttons") {
@@ -53,16 +48,11 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  /**
-   * ゲーム画面の構築
-   */
   create() {
-    // 計算頻度を上げる
-    this.physics.world.setFPS(120);
-    // 1フレームでの最大移動量を制限する
+    this.physics.world.setFPS(60);
     this.physics.world.OVERLAP_BIAS = 4;
-    // めり込み許容距離をタイルの厚み+1に合わせる
-    this.physics.world.TILE_BIAS = 33;
+    this.physics.world.TILE_BIAS = 32;
+
     // 各グループの作成
     this.walls = this.physics.add.staticGroup();
     this.breakableWalls = this.physics.add.staticGroup();
@@ -103,38 +93,195 @@ export class MainScene extends Phaser.Scene {
   private setupPhysics() {
     if (!this.player) return;
 
+    // 静的オブジェクトとの衝突
     this.physics.add.collider(this.player, this.walls);
     this.physics.add.collider(this.player, this.breakableWalls);
-    this.physics.add.collider(this.player, this.movableStones);
-    this.physics.add.collider(this.movableStones, this.walls);
-    this.physics.add.collider(this.movableStones, this.movableStones);
     this.physics.add.collider(this.enemies, this.walls);
     this.physics.add.collider(this.enemies, this.breakableWalls);
-    this.physics.add.collider(this.enemies, this.movableStones);
 
+    // 石との衝突処理：物理的な押し出しではなく、handleStonePush を実行する
+    this.physics.add.collider(this.player, this.movableStones, (p, s) => {
+      this.handleStonePush(p as Player, s as Phaser.Physics.Arcade.Sprite);
+    });
+
+    // 石が勝手に吹っ飛ぶのを防ぐ
+    this.physics.add.collider(this.movableStones, this.walls);
+    this.physics.add.collider(this.movableStones, this.movableStones);
+
+    // 扉の衝突判定
     this.physics.add.collider(this.player, this.doors, (p, d) => {
       const door = d as Phaser.Physics.Arcade.Sprite;
       const doorId = door.getData("id");
 
       if (door.getData("isLocked") && this.player.hasKeyFor(doorId)) {
         this.player.useKeyFor(doorId);
-
         door.setData("isLocked", false);
-        const frame = door.getData("openFrame") ?? 0;
-        door.setFrame(frame);
+        const openFrame = door.getData("openFrame") ?? 0;
+        door.setFrame(openFrame);
         door.setAlpha(0.3);
-        if (door.body) {
-          (door.body as Phaser.Physics.Arcade.StaticBody).enable = false;
-        }
+        if (door.body) (door.body as Phaser.Physics.Arcade.StaticBody).enable = false;
       }
     });
 
-    // 石と扉の衝突（石は鍵を開けられないので、単純な Collider）
-    this.physics.add.collider(this.movableStones, this.doors);
-
-    // プレイヤーと敵が触れた時の判定
-    // this.physics.add.overlap(this.player,this.enemies,() => this.player.playDamageEffect(),undefined,this,);
     this.physics.add.overlap(this.player, this.enemies, this.handlePlayerDeath, undefined, this);
+  }
+
+  /**
+   * 石または氷を押した時の移動ロジック
+   */
+  private handleStonePush(player: Player, stone: Phaser.Physics.Arcade.Sprite) {
+    if (stone.getData("isMoving")) return;
+
+    // 向きの決定
+    const dx = stone.x - player.x;
+    const dy = stone.y - player.y;
+    let moveX = 0;
+    let moveY = 0;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      moveX = dx > 0 ? 32 : -32;
+    } else {
+      moveY = dy > 0 ? 32 : -32;
+    }
+
+    // 移動先の最終地点を計算
+    const isIce = stone.getData("config")?.category === "ICE" || stone.texture.key === "ice"; // 氷判定
+    const targetPos = this.calculateTargetPosition(stone, moveX, moveY, isIce);
+
+    if (targetPos.x === stone.x && targetPos.y === stone.y) return;
+
+    // アニメーション
+    const distance = Phaser.Math.Distance.Between(stone.x, stone.y, targetPos.x, targetPos.y);
+    const duration = (distance / 32) * 300;
+
+    stone.setData("isMoving", true);
+    this.tweens.add({
+      targets: stone,
+      x: targetPos.x,
+      y: targetPos.y,
+      duration: duration,
+      ease: isIce ? "Linear" : "Cubic.easeOut", // 氷は等速、石は少し減速気味に
+      onComplete: () => {
+        stone.setData("isMoving", false);
+        if (stone.body) (stone.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
+      },
+    });
+  }
+
+  /**
+   * 障害物にぶつかるまでの最終座標を計算
+   */
+  private calculateTargetPosition(
+    stone: Phaser.Physics.Arcade.Sprite,
+    moveX: number,
+    moveY: number,
+    isIce: boolean,
+  ): { x: number; y: number } {
+    let currX = stone.x;
+    let currY = stone.y;
+
+    while (true) {
+      const nextX = currX + moveX;
+      const nextY = currY + moveY;
+
+      // 移動先がブロックされているかチェック
+      const isBlocked =
+        this.walls.getChildren().some((w) => (w as any).getBounds().contains(nextX, nextY)) ||
+        this.breakableWalls.getChildren().some((w) => (w as any).getBounds().contains(nextX, nextY)) ||
+        this.doors.getChildren().some((d) => (d as any).body.enable && (d as any).getBounds().contains(nextX, nextY)) ||
+        this.movableStones.getChildren().some((s) => s !== stone && (s as any).getBounds().contains(nextX, nextY));
+
+      if (isBlocked) break;
+
+      // 座標を更新
+      currX = nextX;
+      currY = nextY;
+
+      // 「石」の場合は1回（1マス）でループ終了
+      if (!isIce) break;
+
+      // 無限ループ防止（マップ範囲外チェックなど）
+      if (currX < 0 || currX > this.physics.world.bounds.width || currY < 0 || currY > this.physics.world.bounds.height)
+        break;
+    }
+    return { x: currX, y: currY };
+  }
+
+  private setupItemCollisions() {
+    if (!this.player) return;
+    // player と items グループの接触を監視
+    this.physics.add.overlap(
+      this.player,
+      this.items, // LevelBuilderで作成されたアイテムグループ
+      this.handleItemPickup,
+      undefined,
+      this,
+    );
+  }
+
+  // アイテムを拾った時の処理
+  private handleItemPickup(playerObj: any, itemObj: any) {
+    const player = playerObj as Player;
+    const itemSprite = itemObj as Phaser.Physics.Arcade.Sprite;
+    const config = itemSprite.getData("config") as any; // 一旦 any で構造の違いを許容
+
+    if (!config) return;
+
+    // 鍵のパターン
+    if (config.item && config.item.type === "KEY") {
+      const itemData = config.item;
+      if (itemData.targetDoorId) {
+        player.addKey(itemData.targetDoorId);
+        itemSprite.destroy();
+        console.log(`${itemData.name}を拾った！`);
+      }
+      return;
+    }
+
+    // 武器のパターン
+    if (config.weaponData) {
+      player.equipWeapon(config.weaponData);
+      itemSprite.destroy();
+      console.log(`${config.name}を装備した！`);
+      return;
+    }
+
+    // if (config.item && config.item.type === "WEAPON" && config.item.weaponData) {
+    //   player.equipWeapon(config.item.weaponData);
+    //   itemSprite.destroy();
+    //   return;
+    // }
+  }
+
+  update() {
+    if (this.player) {
+      this.player.update();
+      this.checkGoalCondition();
+    }
+
+    this.gimmickConnections.forEach((conn) => {
+      const { button, door } = conn;
+      if (door.getData("isLocked") === true) return;
+
+      const isPressed = this.physics.overlap(this.player, button) || this.physics.overlap(this.movableStones, button);
+
+      const dOpen = door.getData("openFrame") ?? 0;
+      const dClosed = door.getData("closedFrame") ?? 1;
+      const bOpen = button.getData("openFrame") ?? 1;
+      const bClosed = button.getData("closedFrame") ?? 0;
+
+      if (isPressed) {
+        button.setFrame(bOpen);
+        door.setFrame(dOpen);
+        door.setAlpha(0.3);
+        if (door.body) (door.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+      } else {
+        button.setFrame(bClosed);
+        door.setFrame(dClosed);
+        door.setAlpha(1.0);
+        if (door.body) (door.body as Phaser.Physics.Arcade.StaticBody).enable = true;
+      }
+    });
   }
 
   /**
@@ -143,20 +290,15 @@ export class MainScene extends Phaser.Scene {
   private handlePlayerDeath(playerObj: any, enemyObj: any) {
     // すでにゲームオーバー状態なら何もしない
     if (!this.player.active) return;
-
-    console.log("GAME OVER!");
-
     // 物理演算を停止
     this.physics.pause();
-
     // プレイヤーを赤くして、動きを止める
     const player = playerObj as Player;
     player.setTint(0xff0000); // ToDo: 画像差し替え
     player.active = false;
-
     // 画面中央に「GAME OVER」テキストを表示
     const { width, height } = this.scale;
-    const gameOverText = this.add
+    this.add
       .text(width / 2, height / 2, "GAME OVER", {
         fontSize: "48px",
         color: "#ff0000",
@@ -164,20 +306,14 @@ export class MainScene extends Phaser.Scene {
         stroke: "#000",
         strokeThickness: 6,
       })
-      .setOrigin(0.5);
-
-    // 数秒後にシーンをリスタートさせる
-    // this.time.delayedCall(2000, () => {
-    //   this.scene.restart();
-    // });
+      .setOrigin(0.5)
+      .setScrollFactor(0);
   }
 
   private setupCamera() {
-    const firstRow = this.tiles[0] || [];
-    const mapWidth = firstRow.length * this.tileSize;
+    const mapWidth = this.tiles[0].length * this.tileSize;
     const mapHeight = this.tiles.length * this.tileSize;
     this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
-
     if (mapWidth > this.scale.width || mapHeight > this.scale.height) {
       // プレイヤーの追従（マップが画面より大きい場合のみ有効に機能する）
       this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
@@ -243,12 +379,7 @@ export class MainScene extends Phaser.Scene {
       target.setData("hp", hp);
       target.setTint(0xff0000);
       this.time.delayedCall(100, () => target.clearTint());
-      this.tweens.add({
-        targets: target,
-        x: target.x + 2,
-        duration: 50,
-        yoyo: true,
-      });
+      this.tweens.add({ targets: target, x: target.x + 2, duration: 50, yoyo: true });
     }
   }
 
@@ -257,13 +388,10 @@ export class MainScene extends Phaser.Scene {
     this.timerEvent!.paused = true;
     this.physics.pause();
     this.player.setTint(0x00ff00);
-
     // カメラを少しズーム
     this.cameras.main.zoomTo(1.2, 1000, "Power2");
-
     // クリア演出の実行
     this.showClearUI();
-
     window.dispatchEvent(
       new CustomEvent("game-clear", {
         detail: { score: this.timeLeft },
@@ -273,10 +401,8 @@ export class MainScene extends Phaser.Scene {
 
   private showClearUI() {
     const { width, height } = this.scale;
-
     // Todo: 画像に差し替える
     const container = this.add.container(width / 2, height / 2).setScrollFactor(0);
-
     // テキスト（将来の画像）
     const msg = this.add
       .text(0, -50, "STAGE CLEAR!", {
@@ -296,7 +422,6 @@ export class MainScene extends Phaser.Scene {
 
     container.add([msg, score]);
     container.setScale(0);
-
     this.tweens.add({
       targets: container,
       scale: 1,
@@ -310,101 +435,19 @@ export class MainScene extends Phaser.Scene {
     this.timerEvent?.remove();
     this.physics.pause();
     this.player.setTint(0x555555);
-    console.log(message);
-  }
-
-  private setupItemCollisions() {
-    if (!this.player) return;
-    // player と items グループの接触を監視
-    this.physics.add.overlap(
-      this.player,
-      this.items, // LevelBuilderで作成されたアイテムグループ
-      this.handleItemPickup,
-      undefined,
-      this,
-    );
-  }
-
-  // アイテムを拾った時の処理
-  private handleItemPickup(playerObj: any, itemObj: any) {
-    const player = playerObj as Player;
-    const itemSprite = itemObj as Phaser.Physics.Arcade.Sprite;
-    const config = itemSprite.getData("config") as any; // 一旦 any で構造の違いを許容
-
-    if (!config) return;
-
-    // 鍵のパターン
-    if (config.item && config.item.type === "KEY") {
-      const itemData = config.item;
-      if (itemData.targetDoorId) {
-        player.addKey(itemData.targetDoorId);
-        itemSprite.destroy();
-        console.log(`${itemData.name}を拾った！`);
-      }
-      return;
-    }
-
-    // 武器のパターン
-    if (config.weaponData) {
-      player.equipWeapon(config.weaponData);
-      itemSprite.destroy();
-      console.log(`${config.name}を装備した！`);
-      return;
-    }
-
-    // if (config.item && config.item.type === "WEAPON" && config.item.weaponData) {
-    //   player.equipWeapon(config.item.weaponData);
-    //   itemSprite.destroy();
-    //   return;
-    // }
-  }
-
-  update() {
-    if (this.player) {
-      this.player.update();
-      this.checkGoalCondition();
-    }
-
-    this.gimmickConnections.forEach((conn) => {
-      const { button, door } = conn;
-
-      if (door.getData("isLocked") === false) return;
-
-      const isPressed = this.physics.overlap(this.player, button) || this.physics.overlap(this.movableStones, button);
-
-      const dOpen = door.getData("openFrame") ?? 0;
-      const dClosed = door.getData("closedFrame") ?? 1;
-      const bOpen = button.getData("openFrame") ?? 1;
-      const bClosed = button.getData("closedFrame") ?? 0;
-
-      if (isPressed) {
-        button.setFrame(bOpen);
-        door.setFrame(dOpen);
-        door.setAlpha(0.3);
-        if (door.body) (door.body as Phaser.Physics.Arcade.StaticBody).enable = false;
-      } else {
-        button.setFrame(bClosed);
-        door.setFrame(dClosed);
-        door.setAlpha(1.0);
-        if (door.body) (door.body as Phaser.Physics.Arcade.StaticBody).enable = true;
-      }
-    });
   }
 
   private checkGoalCondition() {
     if (this.timerEvent?.paused) return;
-
     const goals = this.goalGroup.getChildren() as Phaser.GameObjects.Sprite[];
     for (const goal of goals) {
       const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
       const goalBody = goal.body as Phaser.Physics.Arcade.StaticBody;
-
       const isContained =
         playerBody.left >= goalBody.left &&
         playerBody.right <= goalBody.right &&
         playerBody.top >= goalBody.top &&
         playerBody.bottom <= goalBody.bottom;
-
       if (isContained) {
         this.handleGoal();
         return;

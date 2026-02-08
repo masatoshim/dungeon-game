@@ -2,9 +2,9 @@ import { TileConfig, TILE_CATEGORIES } from "./tiles";
 
 export const TILE_CONFIG: Record<string, TileConfig> = {
   P: { name: "プレイヤー", category: TILE_CATEGORIES.PLAYER, texture: "player_idle", frame: 0 },
+  G: { name: "ゴール", category: TILE_CATEGORIES.GOAL, texture: "tileset", frame: 0 },
 
   W: { name: "壁", category: TILE_CATEGORIES.WALL, texture: "tileset", frame: 2 },
-  G: { name: "ゴール", category: TILE_CATEGORIES.GOAL, texture: "tileset", frame: 0 },
   BW1: {
     name: "壊れる壁1",
     category: TILE_CATEGORIES.WALL,
@@ -27,30 +27,12 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
     category: TILE_CATEGORIES.STONE,
     texture: "stones",
     frame: 0,
-    stoneData: {
-      drag: 1000,
-    },
   },
-
-  // Todo: 物理演算に不具合があるため、保留
-  // 鉄球
-  // R2: {
-  //   category: TILE_CATEGORIES.STONE,
-  //   texture: "stones",
-  //   frame: 1,
-  //   stoneData: {
-  //     drag: 2000,
-  //   },
-  // },
-
   R3: {
     name: "氷",
-    category: TILE_CATEGORIES.STONE,
+    category: TILE_CATEGORIES.ICE,
     texture: "stones",
     frame: 2,
-    stoneData: {
-      drag: 10,
-    },
   },
 
   B1: {
@@ -60,7 +42,6 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
     frame: 0,
     openFrame: 1, // 押された時
   },
-
   D1: {
     name: "ボタン扉",
     category: TILE_CATEGORIES.GIMMICK,
@@ -68,10 +49,9 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
     frame: 1,
     openFrame: 0,
   },
-
   K1: {
     name: "鍵",
-    category: TILE_CATEGORIES.ITEM,
+    category: TILE_CATEGORIES.GIMMICK,
     texture: "items",
     frame: 1,
     item: {
@@ -81,7 +61,6 @@ export const TILE_CONFIG: Record<string, TileConfig> = {
       consumesOnUse: true,
     },
   },
-
   KD1: {
     name: "鍵扉",
     category: TILE_CATEGORIES.GIMMICK,
