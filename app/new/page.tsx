@@ -50,6 +50,42 @@ export default function NewDungeonPage() {
   const currentTileConfig = useMemo(() => TILE_CONFIG[selectedTile as TileConfigKey], [selectedTile]);
 
   /**
+   * ダンジョンサイズ変更（形が崩れないように再実装）
+   */
+  const updateTilesSize = (newRows: number, newCols: number) => {
+    setTiles((prev) => {
+      const oldRows = prev.length;
+      const oldCols = prev[0].length;
+      // すべて床の新しい配列を作成
+      const nextTiles = Array(newRows)
+        .fill(0)
+        .map(() => Array(newCols).fill(".."));
+      // 既存のデータをコピー（外周の壁以外）
+      for (let r = 0; r < newRows; r++) {
+        for (let c = 0; c < newCols; c++) {
+          // 範囲内かつ、元の場所が外周でなかったものだけをコピー
+          if (r < oldRows && c < oldCols) {
+            const isOldEdge = r === 0 || r === oldRows - 1 || c === 0 || c === oldCols - 1;
+            if (!isOldEdge) {
+              nextTiles[r][c] = prev[r][c];
+            }
+          }
+        }
+      }
+      // 新しい外周を壁で上書き
+      for (let r = 0; r < newRows; r++) {
+        for (let c = 0; c < newCols; c++) {
+          if (r === 0 || r === newRows - 1 || c === 0 || c === newCols - 1) {
+            nextTiles[r][c] = "W";
+          }
+        }
+      }
+      return nextTiles;
+    });
+    setEntities((prev) => prev.filter((e) => e.x < newCols - 1 && e.y < newRows - 1));
+  };
+
+  /**
    * 設置しようとしているタイルがどのエンティティタイプかを判定
    */
   const getEntityType = (tileId: string): "KEY" | "DOOR" | "BUTTON" | null => {
@@ -185,6 +221,7 @@ export default function NewDungeonPage() {
       });
       if (res.ok) router.push("/");
     } catch (e) {
+      console.log(`error:${e}`);
       alert("保存に失敗しました");
     }
   };
@@ -200,6 +237,7 @@ export default function NewDungeonPage() {
           onSizeChange={(r, c) => {
             setRows(r);
             setCols(c);
+            updateTilesSize(r, c);
           }}
           onSave={handleSave}
         />
